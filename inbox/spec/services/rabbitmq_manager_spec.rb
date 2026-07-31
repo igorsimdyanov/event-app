@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
-
 RSpec.describe RabbitmqManager do
   let(:exchange) { instance_double(Bunny::Exchange) }
   let(:queue) { instance_double(Bunny::Queue, bind: nil) }
