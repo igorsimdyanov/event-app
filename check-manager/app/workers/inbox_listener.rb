@@ -63,7 +63,7 @@ class InboxListener
       RabbitMessage::INCOME_MESSAGE,
       action)
     handler = ACTION_HANDLERS[action&.to_sym]
-    raise Error, "Action #{action} is not supported" unless handler
+    raise StandardError, "Action #{action} is not supported" unless handler
 
     handler.call(parsed_message)
 

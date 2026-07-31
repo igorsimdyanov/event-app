@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
-
 RSpec.describe MailManager do
   let(:first_attachment) { instance_double(Mail::Part) }
   let(:second_attachment) { instance_double(Mail::Part) }

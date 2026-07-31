@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
-
 RSpec.describe TempfileManager do
   let(:content) { File.binread(Rails.root.join('spec/fixtures/check001.jpeg')) }
   let(:body) { instance_double(Mail::Body, decoded: content) }
