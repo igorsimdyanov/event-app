@@ -41,6 +41,8 @@ group :development, :test do
   gem 'pry-byebug'
   gem 'pry-rails'
   gem 'rspec-rails'
+  # Оценка покрытия кода тестами
+  gem 'simplecov', require: false
 end
 
 group :development do
