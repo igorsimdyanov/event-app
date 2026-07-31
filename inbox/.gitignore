@@ -33,6 +33,9 @@
 /spec/examples.txt
 !/.env.sample
 
+# Ignore test coverage reports.
+/coverage
+
 config/settings.local.yml
 config/settings/*.local.yml
 config/environments/*.local.yml
