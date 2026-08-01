@@ -1,9 +1,5 @@
 require "active_support/core_ext/integer/time"
 
-# Приложение сконфигурировано как минимальное (в config/application.rb подключён
-# только active_model). Поэтому здесь нет настроек action_mailer, active_storage
-# и active_record — соответствующие фреймворки не загружены, и обращение к ним
-# привело бы к NoMethodError при загрузке production-окружения.
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
