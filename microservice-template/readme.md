@@ -16,37 +16,37 @@ rails new awesome-template -m microservice-template/template.rb
 Микросервис для принятия решения (CheckManager):
 
 ```bash
-rails _8.0.3_ new check-manager --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
+rails _8.1.3_ new check-manager --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
 ```
 
 Микросервис для распознавания изображения (Tesseract):
 
 ```bash
-rails _8.0.3_ new tesseract --api --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
+rails _8.1.3_ new tesseract --api --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
 ```
 
 Микросервис для распознавания изображения (Yandex Vision OSR):
 
 ```bash
-rails _8.0.3_ new yandex-vision --api --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
+rails _8.1.3_ new yandex-vision --api --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
 ```
 
 Микросервис для правил (CheckRuler):
 
 ```bash
-rails _8.0.3_ new check-ruler --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
+rails _8.1.3_ new check-ruler --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
 ```
 
 Микросервис для правил (BudgetControl):
 
 ```bash
-rails _8.0.3_ new budget-control --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
+rails _8.1.3_ new budget-control --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
 ```
 
 Микросервис для правил (CheckRegister):
 
 ```bash
-rails _8.0.3_ new check-register --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
+rails _8.1.3_ new check-register --database=postgresql --skip-action-mailbox --skip-action-text --skip-action-cable --skip-hotwire --skip-jbuilder --skip-test --skip-system-test --skip-bootsnap --skip-ci --skip-kamal --skip-solid --skip-javascript -m microservice-template/template.rb
 ```
 
 ## Точки входа
