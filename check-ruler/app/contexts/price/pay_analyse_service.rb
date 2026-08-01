@@ -7,8 +7,9 @@ class Price::PayAnalyseService
   def call
     price = Price::ExtractService.call(recognized_check)
 
-    if(price > 200)
-      # Бюджетный контроль
+    if price.nil? || price > 200
+      # Бюджетный контроль. Сюда же попадают чеки, в которых сумму не удалось
+      # распознать (price == nil): решение принимает держатель бюджета вручную.
       routing_key = 'budget_check'
       topic = 'budget_control.in'
     else
