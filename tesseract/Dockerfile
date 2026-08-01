@@ -56,9 +56,8 @@ RUN groupadd --system --gid 1000 rails && \
     chown -R rails:rails log tmp
 USER 1000:1000
 
-# Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+# The service is a message consumer, not an HTTP server: run the Sneakers worker
+# that listens to RabbitMQ. Can be overwritten at runtime.
+CMD ["bundle", "exec", "rails", "sneakers:run"]
