@@ -24,7 +24,7 @@ class RabbitmqManager
       Settings.rabbitmq.outbox_queue,
       durable: true,
       arguments: {
-        'x-dead-letter-exchange' => dead_letter_queue,
+        'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
         'x-dead-letter-routing-key' => dead_letter_queue
       })
     exchange = channel.exchange(

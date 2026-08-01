@@ -11,18 +11,16 @@ class Price::PayAnalyseService
       # Бюджетный контроль. Сюда же попадают чеки, в которых сумму не удалось
       # распознать (price == nil): решение принимает держатель бюджета вручную.
       routing_key = 'budget_check'
-      topic = 'budget_control.in'
     else
       # Регистрируем без контроля
       routing_key = 'pay_register'
-      topic = 'register.in'
     end
     next_message = Price::BuildMessageService.call(
                      message: message,
                      price: price,
                      routing_key: routing_key)
 
-    RabbitMessages::Send.call(next_message, topic)
+    RabbitMessages::Send.call(next_message)
   end
 
   def recognized_check

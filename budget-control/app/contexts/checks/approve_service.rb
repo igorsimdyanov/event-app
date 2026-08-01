@@ -12,6 +12,6 @@ class Checks::ApproveService
                      check: check,
                      routing_key: 'pay_register')
 
-    RabbitMessages::Send.call(next_message, 'register.in')
+    RabbitMessages::Send.call(next_message)
   end
 end
