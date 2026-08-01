@@ -22,7 +22,7 @@ RSpec.describe RabbitmqManager do
     expect(connection).to have_received(:create_channel)
   end
 
-  it 'объявляет устойчивую очередь с dead-letter обменником' do
+  it 'объявляет устойчивую очередь с dead-letter через общий обменник' do
     described_class.call { |_exchange| }
 
     expect(channel).to have_received(:queue).with(
@@ -30,7 +30,7 @@ RSpec.describe RabbitmqManager do
       hash_including(
         durable: true,
         arguments: {
-          'x-dead-letter-exchange' => "#{Settings.rabbitmq.outbox_queue}.error",
+          'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
           'x-dead-letter-routing-key' => "#{Settings.rabbitmq.outbox_queue}.error"
         }
       )
