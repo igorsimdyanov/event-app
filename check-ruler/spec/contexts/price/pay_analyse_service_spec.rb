@@ -20,13 +20,13 @@ RSpec.describe Price::PayAnalyseService do
   context 'когда сумма превышает порог бюджетного контроля (200)' do
     let(:recognized_text) { 'СУММА=250.00' }
 
-    it 'отправляет чек на бюджетный контроль в очередь budget_control.in' do
+    it 'отправляет чек на бюджетный контроль с ключом budget_check' do
       described_class.call(message)
 
-      expect(RabbitMessages::Send).to have_received(:call) do |next_message, topic|
+      expect(RabbitMessages::Send).to have_received(:call) do |next_message|
         expect(next_message[:action]).to eq('budget_check')
+        expect(next_message[:routing_key]).to eq('budget_check')
         expect(next_message.dig(:payload, :price)).to eq(250.0)
-        expect(topic).to eq('budget_control.in')
       end
     end
   end
@@ -34,13 +34,13 @@ RSpec.describe Price::PayAnalyseService do
   context 'когда сумма в пределах порога' do
     let(:recognized_text) { 'СУММА=150.00' }
 
-    it 'отправляет чек на регистрацию в очередь register.in' do
+    it 'отправляет чек на регистрацию с ключом pay_register' do
       described_class.call(message)
 
-      expect(RabbitMessages::Send).to have_received(:call) do |next_message, topic|
+      expect(RabbitMessages::Send).to have_received(:call) do |next_message|
         expect(next_message[:action]).to eq('pay_register')
+        expect(next_message[:routing_key]).to eq('pay_register')
         expect(next_message.dig(:payload, :price)).to eq(150.0)
-        expect(topic).to eq('register.in')
       end
     end
   end
@@ -52,7 +52,7 @@ RSpec.describe Price::PayAnalyseService do
       described_class.call(message)
 
       expect(RabbitMessages::Send).to have_received(:call)
-        .with(hash_including(action: 'pay_register'), 'register.in')
+        .with(hash_including(action: 'pay_register'))
     end
   end
 
@@ -69,9 +69,9 @@ RSpec.describe Price::PayAnalyseService do
     it 'извлекает распознанный текст из вложенной структуры Yandex Vision' do
       described_class.call(message)
 
-      expect(RabbitMessages::Send).to have_received(:call) do |next_message, topic|
+      expect(RabbitMessages::Send).to have_received(:call) do |next_message|
         expect(next_message.dig(:payload, :price)).to eq(250.0)
-        expect(topic).to eq('budget_control.in')
+        expect(next_message[:routing_key]).to eq('budget_check')
       end
     end
   end
@@ -82,10 +82,10 @@ RSpec.describe Price::PayAnalyseService do
     it 'отправляет чек на бюджетный контроль для ручной проверки' do
       described_class.call(message)
 
-      expect(RabbitMessages::Send).to have_received(:call) do |next_message, topic|
+      expect(RabbitMessages::Send).to have_received(:call) do |next_message|
         expect(next_message[:action]).to eq('budget_check')
+        expect(next_message[:routing_key]).to eq('budget_check')
         expect(next_message.dig(:payload, :price)).to be_nil
-        expect(topic).to eq('budget_control.in')
       end
     end
   end

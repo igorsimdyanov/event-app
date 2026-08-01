@@ -1,0 +1,816 @@
+asyncapi: 3.1.0
+
+info:
+  title: Event App — конвейер распознавания и регистрации товарных чеков
+  version: 1.1.0
+  description: |
+    Событийно-ориентированное приложение из 7 микросервисов, обменивающихся
+    сообщениями через RabbitMQ (exchange `services`, тип `topic`).
+
+    Поток обработки:
+    1. **inbox** читает почтовый ящик, сохраняет вложения (товарные чеки) в S3
+       и публикует событие `attachment_registered`.
+    2. **check-manager** (оркестратор) получает событие и отправляет команду
+       `recognize` сервисам распознавания.
+    3. **tesseract** / **yandex-vision** распознают изображение чека и отвечают
+       сообщением `recognized_result` (маршрутный ключ берётся из поля `reply_to`).
+    4. **check-manager** пересылает распознанный текст в **check-ruler**
+       командой `pay_analyse`.
+    5. **check-ruler** извлекает сумму чека. Если сумма ≤ 200 ₽ — сразу
+       публикует `pay_register` в очередь `register.in`. Если сумма > 200 ₽
+       или не распознана — публикует `budget_check` в очередь `budget_control.in`.
+    6. **budget-control** после ручного одобрения держателем бюджета публикует
+       `pay_register` в очередь `register.in`.
+    7. **check-register** регистрирует стоимость товаров и услуг (финальная точка).
+
+    ## Формат сообщения (ADR-0005)
+    Все сообщения — JSON. На верхнем уровне мета-поля (`action`, `created_at`,
+    `routing_key`, опционально `reply_to`), полезная нагрузка — в объекте `payload`.
+
+    ## Сквозной идентификатор (ADR-0004)
+    Каждое сообщение содержит `payload.attachment_id` — UUID вложения,
+    создаваемый единственный раз в сервисе inbox. Он выполняет роль
+    correlation-id всей бизнес-транзакции.
+
+    ## Маршрутизация
+    AMQP routing key каждого сообщения совпадает с его полем `action`
+    (для `recognized_result` — с полем `reply_to` исходного запроса).
+    Очереди привязываются к exchange `services` классом `RabbitBindQueues`
+    по ключам из `ACTION_HANDLERS` воркера-консьюмера.
+  contact:
+    name: Igor Simdyanov
+    email: igorsimdyanov@gmail.com
+  externalDocs:
+    description: Архитектурные решения (ADR) в папке docs/adr
+    url: https://example.com/docs/adr
+
+defaultContentType: application/json
+
+servers:
+  production:
+    host: rabbitmq:5672
+    protocol: amqp
+    protocolVersion: 0.9.1
+    description: |
+      RabbitMQ 4.2 внутри сети docker-compose (сервис `rabbitmq`).
+      Снаружи контейнеров: amqp://localhost:5672,
+      management UI — http://localhost:15672 (guest/guest).
+      Все сервисы работают в vhost `/` и публикуют в durable topic-exchange `services`.
+    security:
+      - $ref: '#/components/securitySchemes/userPassword'
+
+channels:
+  attachmentRegistered:
+    address: attachment_registered
+    title: Регистрация вложения
+    summary: inbox → check-manager
+    description: |
+      Публикуется в exchange `services` с ключом `attachment_registered`.
+      Попадает в очередь `inbox.out` (durable), которую слушает
+      check-manager (`InboxListener`).
+
+      Очередь объявлена с `x-dead-letter-exchange: services` и
+      `x-dead-letter-routing-key: inbox.out.error` — отклонённые сообщения
+      (reject) возвращаются в exchange `services` и по ключу
+      `inbox.out.error` попадают в DLQ `inbox.out.error`.
+    messages:
+      attachmentRegistered:
+        $ref: '#/components/messages/attachmentRegistered'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: services
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+  recognize:
+    address: recognize
+    title: Команда распознавания чека
+    summary: check-manager → tesseract / yandex-vision
+    description: |
+      Публикуется в exchange `services` с ключом `recognize`.
+      Ключом `recognize` к exchange привязаны две очереди:
+      `tesseract.in` (сервис tesseract) и `yandex_vision.in` (сервис
+      yandex-vision; в текущем docker-compose не запущен — очередь без
+      консьюмеров). Сообщение-запрос: поле `reply_to` указывает маршрутный
+      ключ для ответа (`recognized_result`).
+    messages:
+      recognize:
+        $ref: '#/components/messages/recognize'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: services
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+  recognizedResult:
+    address: recognized_result
+    title: Результат распознавания
+    summary: tesseract / yandex-vision → check-manager
+    description: |
+      Ответ на команду `recognize`: маршрутный ключ берётся сервисом
+      распознавания из поля `reply_to` входящего сообщения.
+      Попадает в очередь `recognizer.out`, которую слушает
+      check-manager (`RecognizerListener`).
+    messages:
+      recognizedResult:
+        $ref: '#/components/messages/recognizedResult'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: services
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+  payAnalyse:
+    address: pay_analyse
+    title: Анализ стоимости чека
+    summary: check-manager → check-ruler
+    description: |
+      Публикуется в exchange `services` с ключом `pay_analyse`.
+      Попадает в очередь `check_manager.out`, которую слушает check-ruler.
+    messages:
+      payAnalyse:
+        $ref: '#/components/messages/payAnalyse'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: services
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+  budgetCheck:
+    address: budget_check
+    title: Отправка чека на бюджетный контроль
+    summary: check-ruler → budget-control
+    description: |
+      Публикуется, когда сумма чека **больше 200 ₽ либо не распознана**
+      (`price == null`) — решение принимает держатель бюджета вручную.
+      Публикуется в exchange `services` с ключом `budget_check`.
+      Попадает в очередь `budget_control.in`, которую слушает budget-control.
+    messages:
+      budgetCheck:
+        $ref: '#/components/messages/budgetCheck'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: services
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+  payRegister:
+    address: pay_register
+    title: Регистрация стоимости чека
+    summary: check-ruler / budget-control → check-register
+    description: |
+      Финальное сообщение конвейера. Два продюсера:
+      * **check-ruler** — автоматически, когда сумма чека ≤ 200 ₽;
+      * **budget-control** — после ручного одобрения чека держателем бюджета
+        (payload сокращённый: без `file`, `created_at` и `message`).
+
+      Публикуется в exchange `services` с ключом `pay_register`.
+      Попадает в очередь `register.in`, которую слушает
+      check-register (`Checks::RegisterService`).
+    messages:
+      payRegisterFromRuler:
+        $ref: '#/components/messages/payRegisterFromRuler'
+      payRegisterFromBudgetControl:
+        $ref: '#/components/messages/payRegisterFromBudgetControl'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: services
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+operations:
+  inbox.sendAttachmentRegistered:
+    action: send
+    channel:
+      $ref: '#/channels/attachmentRegistered'
+    title: 'inbox: публикация зарегистрированного вложения'
+    summary: >
+      Периодическая задача SentAttachmentJob публикует все неотправленные
+      вложения (Attachment.not_sent) и помечает их флагом sent.
+    messages:
+      - $ref: '#/channels/attachmentRegistered/messages/attachmentRegistered'
+
+  checkManager.receiveAttachmentRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/attachmentRegistered'
+    title: 'check-manager: приём вложения (InboxListener, очередь inbox.out)'
+    summary: >
+      Обработчик Checks::RecognizeService формирует и публикует команду recognize.
+      При ошибке — reject с дальнейшей отправкой в DLQ inbox.out.error.
+    messages:
+      - $ref: '#/channels/attachmentRegistered/messages/attachmentRegistered'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  checkManager.sendRecognize:
+    action: send
+    channel:
+      $ref: '#/channels/recognize'
+    title: 'check-manager: команда распознавания'
+    messages:
+      - $ref: '#/channels/recognize/messages/recognize'
+    reply:
+      address:
+        location: '$message.payload#/reply_to'
+        description: Маршрутный ключ ответа передаётся в поле reply_to сообщения.
+      channel:
+        $ref: '#/channels/recognizedResult'
+      messages:
+        - $ref: '#/channels/recognizedResult/messages/recognizedResult'
+
+  tesseract.receiveRecognize:
+    action: receive
+    channel:
+      $ref: '#/channels/recognize'
+    title: 'tesseract: распознавание чека (очередь tesseract.in)'
+    summary: >
+      Скачивает файл из S3 по payload.full_path, распознаёт текст утилитой
+      tesseract (rus) и отвечает сообщением recognized_result.
+    messages:
+      - $ref: '#/channels/recognize/messages/recognize'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  yandexVision.receiveRecognize:
+    action: receive
+    channel:
+      $ref: '#/channels/recognize'
+    title: 'yandex-vision: распознавание чека (очередь yandex_vision.in)'
+    summary: >
+      Альтернативный распознаватель на Yandex Vision OCR. В текущем
+      docker-compose не запущен; очередь yandex_vision.in существует
+      в брокере без консьюмеров.
+    messages:
+      - $ref: '#/channels/recognize/messages/recognize'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  tesseract.sendRecognizedResult:
+    action: send
+    channel:
+      $ref: '#/channels/recognizedResult'
+    title: 'tesseract / yandex-vision: публикация результата распознавания'
+    summary: >
+      Маршрутный ключ берётся из поля reply_to входящей команды recognize.
+      tesseract кладёт в payload.message распознанный текст (строка),
+      yandex-vision — JSON-объект ответа Vision OCR.
+    messages:
+      - $ref: '#/channels/recognizedResult/messages/recognizedResult'
+
+  checkManager.receiveRecognizedResult:
+    action: receive
+    channel:
+      $ref: '#/channels/recognizedResult'
+    title: 'check-manager: приём результата (RecognizerListener, очередь recognizer.out)'
+    summary: Обработчик Pays::AnalyseService публикует команду pay_analyse.
+    messages:
+      - $ref: '#/channels/recognizedResult/messages/recognizedResult'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  checkManager.sendPayAnalyse:
+    action: send
+    channel:
+      $ref: '#/channels/payAnalyse'
+    title: 'check-manager: команда анализа стоимости'
+    messages:
+      - $ref: '#/channels/payAnalyse/messages/payAnalyse'
+
+  checkRuler.receivePayAnalyse:
+    action: receive
+    channel:
+      $ref: '#/channels/payAnalyse'
+    title: 'check-ruler: анализ стоимости (очередь check_manager.out)'
+    summary: >
+      Price::ExtractService извлекает сумму из распознанного текста.
+      Далее ветвление: сумма ≤ 200 ₽ → pay_register; сумма > 200 ₽ или
+      не распознана → budget_check.
+    messages:
+      - $ref: '#/channels/payAnalyse/messages/payAnalyse'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  checkRuler.sendBudgetCheck:
+    action: send
+    channel:
+      $ref: '#/channels/budgetCheck'
+    title: 'check-ruler: отправка на бюджетный контроль (сумма > 200 ₽ или null)'
+    messages:
+      - $ref: '#/channels/budgetCheck/messages/budgetCheck'
+
+  budgetControl.receiveBudgetCheck:
+    action: receive
+    channel:
+      $ref: '#/channels/budgetCheck'
+    title: 'budget-control: приём чека на одобрение (очередь budget_control.in)'
+    summary: >
+      Checks::RegisterService сохраняет чек в БД; далее держатель бюджета
+      одобряет его вручную через веб-интерфейс (порт 8004).
+    messages:
+      - $ref: '#/channels/budgetCheck/messages/budgetCheck'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  checkRuler.sendPayRegister:
+    action: send
+    channel:
+      $ref: '#/channels/payRegister'
+    title: 'check-ruler: автоматическая регистрация (сумма ≤ 200 ₽)'
+    messages:
+      - $ref: '#/channels/payRegister/messages/payRegisterFromRuler'
+
+  budgetControl.sendPayRegister:
+    action: send
+    channel:
+      $ref: '#/channels/payRegister'
+    title: 'budget-control: регистрация после ручного одобрения'
+    summary: >
+      Checks::ApproveService помечает чек одобренным (approved: true)
+      и публикует сокращённое сообщение pay_register.
+    messages:
+      - $ref: '#/channels/payRegister/messages/payRegisterFromBudgetControl'
+
+  checkRegister.receivePayRegister:
+    action: receive
+    channel:
+      $ref: '#/channels/payRegister'
+    title: 'check-register: регистрация стоимости (очередь register.in)'
+    summary: >
+      Финальная точка конвейера — Checks::RegisterService фиксирует
+      стоимость товаров и услуг в БД.
+    messages:
+      - $ref: '#/channels/payRegister/messages/payRegisterFromRuler'
+      - $ref: '#/channels/payRegister/messages/payRegisterFromBudgetControl'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+components:
+  securitySchemes:
+    userPassword:
+      type: userPassword
+      description: Логин/пароль RabbitMQ (по умолчанию guest/guest).
+
+  correlationIds:
+    attachmentId:
+      location: '$message.payload#/payload/attachment_id'
+      description: |
+        Сквозной идентификатор бизнес-транзакции (ADR-0004): UUID вложения,
+        генерируется единственный раз в сервисе inbox и передаётся
+        неизменным через все сообщения конвейера.
+
+  messages:
+    attachmentRegistered:
+      name: attachmentRegistered
+      title: Вложение зарегистрировано
+      summary: Новое вложение (товарный чек) сохранено в S3 и готово к распознаванию.
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/attachmentRegisteredMessage'
+      examples:
+        - name: attachmentRegistered
+          summary: Пример из ADR-0005
+          payload:
+            action: attachment_registered
+            payload:
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              md5: 3877e0c18077c6f966774322d12d982a
+              created_at: 1761736885
+            created_at: 1761736890
+            routing_key: attachment_registered
+
+    recognize:
+      name: recognize
+      title: Команда распознавания
+      summary: Запрос на распознавание изображения чека (запрос-ответ через reply_to).
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/recognizeMessage'
+      examples:
+        - name: recognize
+          payload:
+            action: recognize
+            payload:
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              created_at: 1761736885
+            created_at: 1761736892
+            routing_key: recognize
+            reply_to: recognized_result
+
+    recognizedResult:
+      name: recognizedResult
+      title: Результат распознавания
+      summary: >
+        Распознанный текст чека: строка (tesseract) либо JSON-объект
+        ответа Yandex Vision OCR.
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/recognizedResultMessage'
+      examples:
+        - name: tesseractResult
+          summary: Ответ tesseract — распознанный текст строкой
+          payload:
+            action: recognized_result
+            payload:
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              created_at: 1761736885
+              message: "ООО Ромашка\nТовар 1 .... 154.00\nИТОГО: 154.00"
+            created_at: 1761736905
+            routing_key: recognized_result
+
+    payAnalyse:
+      name: payAnalyse
+      title: Команда анализа стоимости
+      summary: Передача распознанного текста чека на извлечение суммы и применение правил.
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/payAnalyseMessage'
+      examples:
+        - name: payAnalyse
+          payload:
+            action: pay_analyse
+            payload:
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              created_at: 1761736885
+              message: "ООО Ромашка\nТовар 1 .... 154.00\nИТОГО: 154.00"
+            created_at: 1761736906
+            routing_key: pay_analyse
+
+    budgetCheck:
+      name: budgetCheck
+      title: Чек на бюджетный контроль
+      summary: >
+        Сумма чека больше 200 ₽ либо не распознана (price = null) —
+        требуется ручное одобрение держателем бюджета.
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/budgetCheckMessage'
+      examples:
+        - name: expensiveCheck
+          summary: Сумма превышает порог автоматической регистрации
+          payload:
+            action: budget_check
+            payload:
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              created_at: 1761736885
+              message: "ООО Ромашка\nИТОГО: 1500.00"
+              price: 1500.0
+            created_at: 1761736907
+            routing_key: budget_check
+        - name: unrecognizedPrice
+          summary: Сумму извлечь не удалось — решение за держателем бюджета
+          payload:
+            action: budget_check
+            payload:
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              created_at: 1761736885
+              message: "~~~нечитаемый скан~~~"
+              price: null
+            created_at: 1761736907
+            routing_key: budget_check
+
+    payRegisterFromRuler:
+      name: payRegisterFromRuler
+      title: Регистрация стоимости (автоматическая)
+      summary: Сумма чека ≤ 200 ₽ — регистрируется без бюджетного контроля.
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/payRegisterFromRulerMessage'
+      examples:
+        - name: autoRegister
+          payload:
+            action: pay_register
+            payload:
+              file: 5775dae8f4b10.jpeg
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              created_at: 1761736885
+              message: "ООО Ромашка\nИТОГО: 154.00"
+              price: 154.0
+            created_at: 1761736908
+            routing_key: pay_register
+
+    payRegisterFromBudgetControl:
+      name: payRegisterFromBudgetControl
+      title: Регистрация стоимости (после одобрения)
+      summary: >
+        Держатель бюджета одобрил чек — сокращённый payload без file,
+        created_at и message.
+      contentType: application/json
+      correlationId:
+        $ref: '#/components/correlationIds/attachmentId'
+      payload:
+        $ref: '#/components/schemas/payRegisterFromBudgetControlMessage'
+      examples:
+        - name: approvedRegister
+          payload:
+            action: pay_register
+            payload:
+              full_path: attachment/2025-10-29/5775dae8f4b10.jpeg
+              attachment_id: 550e8400-e29b-41d4-a716-446655440000
+              price: 1500.0
+            created_at: 1761740000
+            routing_key: pay_register
+
+  schemas:
+    envelope:
+      type: object
+      description: Общий конверт сообщения (ADR-0005).
+      required:
+        - action
+        - payload
+        - created_at
+        - routing_key
+      properties:
+        action:
+          type: string
+          description: Действие, которое должен выполнить получатель с data-объектом.
+        payload:
+          type: object
+          description: Полезная нагрузка. Обязательно содержит attachment_id (ADR-0004).
+        created_at:
+          type: integer
+          description: Время создания сообщения (Unix timestamp, UTC).
+        routing_key:
+          type: string
+          description: >
+            Маршрутный ключ сообщения (дублирует action) — совпадает
+            с фактическим AMQP routing key публикации.
+        reply_to:
+          type: string
+          description: >
+            Маршрутный ключ для ответа — используется в запросах,
+            требующих обязательного ответа (recognize → recognized_result).
+
+    checkPayload:
+      type: object
+      description: Базовый payload с данными о вложении (товарном чеке).
+      required:
+        - attachment_id
+      properties:
+        attachment_id:
+          type: string
+          format: uuid
+          description: Сквозной идентификатор бизнес-транзакции (ADR-0004).
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        file:
+          type: string
+          description: Имя файла вложения.
+        full_path:
+          type: string
+          description: Ключ (путь) файла в S3-бакете.
+        created_at:
+          type: integer
+          description: Время регистрации вложения в inbox (Unix timestamp, UTC).
+
+    recognizedText:
+      description: >
+        Результат распознавания: tesseract возвращает строку,
+        Yandex Vision — JSON-объект с result.textAnnotation.fullText.
+      oneOf:
+        - type: string
+          description: Распознанный текст (tesseract).
+        - type: object
+          description: Ответ Yandex Vision OCR.
+          properties:
+            result:
+              type: object
+              properties:
+                textAnnotation:
+                  type: object
+                  properties:
+                    fullText:
+                      type: string
+                      description: Полный распознанный текст.
+          additionalProperties: true
+
+    attachmentRegisteredMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          properties:
+            action:
+              const: attachment_registered
+            routing_key:
+              const: attachment_registered
+            payload:
+              allOf:
+                - $ref: '#/components/schemas/checkPayload'
+                - type: object
+                  required:
+                    - file
+                    - full_path
+                    - md5
+                    - created_at
+                  properties:
+                    md5:
+                      type: string
+                      description: MD5-хэш содержимого файла (только в этом сообщении).
+
+    recognizeMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          required:
+            - reply_to
+          properties:
+            action:
+              const: recognize
+            routing_key:
+              const: recognize
+            reply_to:
+              const: recognized_result
+            payload:
+              $ref: '#/components/schemas/checkPayload'
+
+    recognizedResultMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          properties:
+            action:
+              const: recognized_result
+            routing_key:
+              const: recognized_result
+            payload:
+              allOf:
+                - $ref: '#/components/schemas/checkPayload'
+                - type: object
+                  required:
+                    - message
+                  properties:
+                    message:
+                      $ref: '#/components/schemas/recognizedText'
+
+    payAnalyseMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          properties:
+            action:
+              const: pay_analyse
+            routing_key:
+              const: pay_analyse
+            payload:
+              allOf:
+                - $ref: '#/components/schemas/checkPayload'
+                - type: object
+                  required:
+                    - message
+                  properties:
+                    message:
+                      $ref: '#/components/schemas/recognizedText'
+
+    budgetCheckMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          properties:
+            action:
+              const: budget_check
+            routing_key:
+              const: budget_check
+            payload:
+              allOf:
+                - $ref: '#/components/schemas/checkPayload'
+                - type: object
+                  required:
+                    - message
+                    - price
+                  properties:
+                    message:
+                      $ref: '#/components/schemas/recognizedText'
+                    price:
+                      type:
+                        - number
+                        - 'null'
+                      description: >
+                        Извлечённая сумма чека в рублях. Больше 200 либо null,
+                        если сумму распознать не удалось.
+
+    payRegisterFromRulerMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          properties:
+            action:
+              const: pay_register
+            routing_key:
+              const: pay_register
+            payload:
+              allOf:
+                - $ref: '#/components/schemas/checkPayload'
+                - type: object
+                  required:
+                    - message
+                    - price
+                  properties:
+                    message:
+                      $ref: '#/components/schemas/recognizedText'
+                    price:
+                      type: number
+                      maximum: 200
+                      description: Сумма чека в рублях (не превышает порог 200 ₽).
+
+    payRegisterFromBudgetControlMessage:
+      allOf:
+        - $ref: '#/components/schemas/envelope'
+        - type: object
+          properties:
+            action:
+              const: pay_register
+            routing_key:
+              const: pay_register
+            payload:
+              type: object
+              description: >
+                Сокращённый payload из budget-control: поля file, created_at
+                и message отсутствуют.
+              required:
+                - attachment_id
+                - full_path
+                - price
+              properties:
+                attachment_id:
+                  type: string
+                  format: uuid
+                  description: Сквозной идентификатор бизнес-транзакции (ADR-0004).
+                full_path:
+                  type: string
+                  description: Ключ (путь) файла в S3-бакете.
+                price:
+                  type:
+                    - number
+                    - 'null'
+                  description: >
+                    Одобренная держателем бюджета сумма чека
+                    (null, если сумма так и не была распознана).

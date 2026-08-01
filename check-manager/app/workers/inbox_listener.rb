@@ -10,7 +10,7 @@ class InboxListener
   ARGUMENTS = {
     durable: true,
     arguments: {
-      'x-dead-letter-exchange' => QUEUE_DEAD_LETTER,
+      'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
       'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
     }
   }
@@ -27,7 +27,7 @@ class InboxListener
     Settings.sneakers.inbox_queue,
     queue_options: {
       arguments: {
-        'x-dead-letter-exchange' => QUEUE_DEAD_LETTER,
+        'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
         'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
       }
     }
