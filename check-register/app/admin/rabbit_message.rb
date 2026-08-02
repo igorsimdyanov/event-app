@@ -9,7 +9,7 @@ ActiveAdmin.register RabbitMessage do
   filter :action, as: :select,
                   collection: proc { RabbitMessage.select(:action).distinct.pluck(:action).sort }
   filter :success
-  filter :direction, as: :select, collection: proc { %w[income outcome] }
+  filter :direction, as: :select, collection: proc { RabbitMessage.direction_options }
 
   controller do
     def scoped_collection
@@ -31,7 +31,9 @@ ActiveAdmin.register RabbitMessage do
   end
 
   index do
-    column :direction
+    column :direction do |message|
+      message.human_direction
+    end
     column :action
     column :routing_key
     column :success
@@ -43,7 +45,9 @@ ActiveAdmin.register RabbitMessage do
 
   show do
     attributes_table do
-      row :direction
+      row :direction do |message|
+        message.human_direction
+      end
       row :action
       row :routing_key
       row :success

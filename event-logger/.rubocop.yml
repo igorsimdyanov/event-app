@@ -1,0 +1,66 @@
+# Omakase Ruby styling for Rails
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+require:
+- rubocop-performance
+- rubocop-rails
+- rubocop-rspec
+
+Rails:
+  Enabled: true
+
+Rails/FilePath:
+  EnforcedStyle: arguments
+
+Style/Documentation:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: single_quotes
+
+Layout/LineLength:
+  AutoCorrect: true
+  Max: 100
+  AllowedPatterns: ['(\A|\s)#']
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/RescueStandardError:
+  Enabled: false
+
+Style/AsciiComments:
+  Enabled: false
+
+Style/StringLiterals:
+  Enabled: false
+
+Metrics/AbcSize:
+  Max: 30
+
+Metrics/BlockLength:
+  Max: 200
+  Exclude:
+    - 'app/admin/**/*'
+    - 'Rakefile'
+    - '**/*.rake'
+    - 'spec/**/*'
+
+Rails/HttpPositionalArguments:
+  Exclude:
+    - 'spec/**/*'
+
+AllCops:
+  Exclude:
+    - 'tmp/**/*'
+    - 'db/**/*'
+    - 'bin/**/*'
+    - 'vendor/bundle/**/*'
+    - 'docs/**/*'
+
+# кол-во строк в блоке it или specify
+RSpec/ExampleLength:
+  Max: 10

@@ -1,0 +1,65 @@
+$am-theme-primary: #383548;
+$am-theme-accent: #f76e6e;
+$am-theme-backdrop: #646464;
+$am-theme-paper: #c8c8c8;
+
+// SASS variable overrides must be declared before loading up Active Admin's styles.
+//
+// To view the variables that Active Admin provides, take a look at
+// `app/assets/stylesheets/active_admin/mixins/_variables.scss` in the
+// Active Admin source.
+//
+// For example, to change the sidebar width:
+// $sidebar-width: 242px;
+
+// Active Admin's got SASS!
+@import "active_admin/mixins";
+//@import "active_admin/base";
+@import "activeadmin_addons/all";
+@import "activeadmin_addons/material";
+@import "jquery.json-viewer";
+@import "suggestions.min";
+
+.status_tag {
+  &.current { background: #ffea44; }
+  &.error { background: #ff3300; }
+  &.success { background: #33cc33; }
+}
+
+.b-images-image{
+  img {
+      max-width: 100%;
+  }
+  max-width: 100px;
+}
+
+.flash_error {
+  background: #ff0000;
+}
+
+.field {
+  margin: 10px 0px 10px 0px;
+  &-margin-left-right {
+    margin: 0px 20px 0px 20px;
+    display: flex;
+
+    textarea {
+      flex: 1;
+      height: 300px;
+    }
+  }
+}
+
+body.logged_out {
+  #wrapper {
+    #content_wrapper {
+      background-color: #ccc;
+      width: 260px;
+      margin: 0px auto;
+    }
+  }
+}
+
+.panel_contents {
+  padding: 0px 0px 10px 15px;
+}
