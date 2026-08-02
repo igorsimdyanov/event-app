@@ -66,7 +66,7 @@ ru:
 
   activerecord:
     models:
-      receipt:
+      check:
         one: Чек
         few: Чека
         many: Чеков
@@ -77,7 +77,7 @@ ru:
         many: Событий
         other: События
     attributes:
-      receipt:
+      check:
         attachment_id: Correlation-id (attachment_id)
         file: Файл
         full_path: Путь в S3
@@ -91,7 +91,7 @@ ru:
         created_at: Создан
         updated_at: Обновлён
       event:
-        receipt: Чек
+        check: Чек
         attachment_id: Correlation-id (attachment_id)
         action: Действие
         routing_key: Ключ маршрутизации

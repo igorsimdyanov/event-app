@@ -32,13 +32,13 @@ ActiveAdmin.register_page 'Dashboard' do
       end
     end
 
-    panel t('active_admin.dashboard_stats.last_receipts') do
-      table_for Receipt.recent.limit(10) do
-        column(:attachment_id) { |receipt| link_to receipt.attachment_id, admin_receipt_path(receipt) }
+    panel t('active_admin.dashboard_stats.last_checks') do
+      table_for Check.recent.limit(10) do
+        column(:attachment_id) { |check| link_to check.attachment_id, admin_check_path(check) }
         column(:file)
         column(:price)
-        column(:last_action) do |receipt|
-          status_tag receipt.last_action, class: receipt.failed? ? 'error' : 'success'
+        column(:last_action) do |check|
+          status_tag check.last_action, class: check.failed? ? 'error' : 'success'
         end
         column(:events_count)
         column(:last_event_at)

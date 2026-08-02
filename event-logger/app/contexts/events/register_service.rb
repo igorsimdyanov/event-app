@@ -11,9 +11,9 @@ class Events::RegisterService
   # Регистрирует событие и подшивает его к чеку с тем же correlation-id
   def call
     ActiveRecord::Base.transaction do
-      receipt = attachment_id.present? ? Receipt.for_correlation(attachment_id) : nil
-      event = create_event(receipt)
-      refresh_receipt(receipt.reload, event) if receipt
+      check = attachment_id.present? ? Check.for_correlation(attachment_id) : nil
+      event = create_event(check)
+      refresh_check(check.reload, event) if check
 
       event
     end
@@ -21,9 +21,9 @@ class Events::RegisterService
 
   private
 
-  def create_event(receipt)
+  def create_event(check)
     Event.create!(
-      receipt: receipt,
+      check: check,
       attachment_id: attachment_id,
       action: action,
       routing_key: routing_key.presence || envelope[:routing_key],
@@ -37,20 +37,20 @@ class Events::RegisterService
   end
 
   # Чек накапливает сведения о вложении по мере прохождения конвейера
-  def refresh_receipt(receipt, event)
-    receipt.file = payload[:file] if payload[:file].present?
-    receipt.full_path = payload[:full_path] if payload[:full_path].present?
-    receipt.price = payload[:price] unless payload[:price].nil?
-    receipt.failed_events_count += 1 unless event.success?
-    receipt.first_event_at = [ receipt.first_event_at, event.occurred_at ].compact.min
-    receipt.last_action = event.action if last_event?(receipt, event)
-    receipt.last_event_at = [ receipt.last_event_at, event.occurred_at ].compact.max
-    receipt.save!
+  def refresh_check(check, event)
+    check.file = payload[:file] if payload[:file].present?
+    check.full_path = payload[:full_path] if payload[:full_path].present?
+    check.price = payload[:price] unless payload[:price].nil?
+    check.failed_events_count += 1 unless event.success?
+    check.first_event_at = [ check.first_event_at, event.occurred_at ].compact.min
+    check.last_action = event.action if last_event?(check, event)
+    check.last_event_at = [ check.last_event_at, event.occurred_at ].compact.max
+    check.save!
   end
 
-  def last_event?(receipt, event)
-    receipt.last_event_at.blank? || event.occurred_at.blank? ||
-      event.occurred_at >= receipt.last_event_at
+  def last_event?(check, event)
+    check.last_event_at.blank? || event.occurred_at.blank? ||
+      event.occurred_at >= check.last_event_at
   end
 
   def envelope

@@ -11,12 +11,13 @@ ActiveAdmin.register Event do
   filter :source, as: :select,
                   collection: proc { Event.distinct.pluck(:source).compact.sort }
   filter :success
-  filter :attachment_id_cont, as: :string, label: proc { I18n.t('active_admin.filters.correlation_id') }
+  filter :attachment_id_text_cont, as: :string,
+                                   label: proc { I18n.t('active_admin.filters.correlation_id') }
   filter :occurred_at
 
   controller do
     def scoped_collection
-      end_of_association_chain.includes(:receipt)
+      end_of_association_chain.includes(:check)
     end
   end
 
@@ -28,9 +29,9 @@ ActiveAdmin.register Event do
     column :success do |event|
       status_tag event.success?, class: event.success? ? 'success' : 'error'
     end
-    column :receipt do |event|
-      if event.receipt
-        link_to event.receipt.attachment_id, admin_receipt_path(event.receipt)
+    column :check do |event|
+      if event.check
+        link_to event.check.attachment_id, admin_check_path(event.check)
       else
         event.attachment_id
       end
@@ -41,8 +42,8 @@ ActiveAdmin.register Event do
 
   show do
     attributes_table do
-      row :receipt do |event|
-        event.receipt && link_to(event.receipt.attachment_id, admin_receipt_path(event.receipt))
+      row :check do |event|
+        event.check && link_to(event.check.attachment_id, admin_check_path(event.check))
       end
       row :attachment_id
       row :action
