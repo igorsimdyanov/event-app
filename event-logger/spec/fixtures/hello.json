@@ -1,0 +1,14 @@
+{
+  "id": "d8560533-9d18-44e1-9fdd-4672c6a39e6c",
+  "routing_key": "inbox.out",
+  "action": "attachment_registered",
+  "created_at": 1761416100,
+  "service_name": "HelloRabbitmqService",
+  "params": {
+    "attachment_id": "0c28688c-0086-4beb-b6d6-8b5bb1d59861",
+    "file": "549c96e1-2db2-44d3-b1ff-c1a2840d61b3.jpg",
+    "full_path":"attachment/2025-10-25/549c96e1-2db2-44d3-b1ff-c1a2840d61b3.jpg",
+    "md5":"cd48f820c0cb23ed86ed970996e2bd53",
+    "created_at": 1761416041
+  }
+}

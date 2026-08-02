@@ -44,6 +44,20 @@ class ::RailsTemplate < Thor::Group
     copy_file 'config/locales/ru.active_admin.yml', force: true
   end
 
+  # Гема rails-i18n в проекте нет, поэтому русские правила множественного
+  # числа подключаются вручную — без них ActiveAdmin падает на формах
+  # one/few/many при обращении к названиям ресурсов
+  def configure_locale
+    copy_file 'config/initializers/i18n.rb'
+    copy_file 'config/locales/plurals.rb'
+    copy_file 'config/locales/ru.yml', force: true
+
+    environment <<~RUBY
+      config.i18n.available_locales = %i[en ru]
+      config.i18n.default_locale = :ru
+    RUBY
+  end
+
   def configure_controllers
     copy_file 'app/controllers/application_controller.rb', force: true
   end

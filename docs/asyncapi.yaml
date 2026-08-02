@@ -23,6 +23,12 @@ info:
        `pay_register` в очередь `register.in`.
     7. **check-register** регистрирует стоимость товаров и услуг (финальная точка).
 
+    Особняком стоит **event-logger**: его очередь `event_logger.in` привязана
+    к exchange `services` маской маршрутных ключей `#`, поэтому сервис получает
+    копию каждого сообщения конвейера, не вмешиваясь в его работу. События
+    группируются по `payload.attachment_id` и доступны в ActiveAdmin-панели
+    (порт 8005) — список чеков и хронология событий внутри каждого чека.
+
     ## Формат сообщения (ADR-0005)
     Все сообщения — JSON. На верхнем уровне мета-поля (`action`, `created_at`,
     `routing_key`, опционально `reply_to`), полезная нагрузка — в объекте `payload`.
@@ -381,6 +387,89 @@ operations:
     summary: >
       Финальная точка конвейера — Checks::RegisterService фиксирует
       стоимость товаров и услуг в БД.
+    messages:
+      - $ref: '#/channels/payRegister/messages/payRegisterFromRuler'
+      - $ref: '#/channels/payRegister/messages/payRegisterFromBudgetControl'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  eventLogger.receiveAttachmentRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/attachmentRegistered'
+    title: 'event-logger: журналирование события (очередь event_logger.in)'
+    summary: >
+      Очередь event_logger.in привязана к exchange `services` маской `#`,
+      поэтому получает копию сообщения. Events::RegisterService сохраняет
+      событие и подшивает его к чеку с тем же payload.attachment_id.
+    messages:
+      - $ref: '#/channels/attachmentRegistered/messages/attachmentRegistered'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  eventLogger.receiveRecognize:
+    action: receive
+    channel:
+      $ref: '#/channels/recognize'
+    title: 'event-logger: журналирование команды распознавания'
+    messages:
+      - $ref: '#/channels/recognize/messages/recognize'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  eventLogger.receiveRecognizedResult:
+    action: receive
+    channel:
+      $ref: '#/channels/recognizedResult'
+    title: 'event-logger: журналирование результата распознавания'
+    summary: >
+      Источник события (tesseract или yandex-vision) определяется по форме
+      payload.message: строка — tesseract, объект ответа OCR — yandex-vision.
+    messages:
+      - $ref: '#/channels/recognizedResult/messages/recognizedResult'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  eventLogger.receivePayAnalyse:
+    action: receive
+    channel:
+      $ref: '#/channels/payAnalyse'
+    title: 'event-logger: журналирование команды анализа стоимости'
+    messages:
+      - $ref: '#/channels/payAnalyse/messages/payAnalyse'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  eventLogger.receiveBudgetCheck:
+    action: receive
+    channel:
+      $ref: '#/channels/budgetCheck'
+    title: 'event-logger: журналирование отправки на бюджетный контроль'
+    messages:
+      - $ref: '#/channels/budgetCheck/messages/budgetCheck'
+    bindings:
+      amqp:
+        ack: true
+        bindingVersion: 0.3.0
+
+  eventLogger.receivePayRegister:
+    action: receive
+    channel:
+      $ref: '#/channels/payRegister'
+    title: 'event-logger: журналирование регистрации стоимости'
+    summary: >
+      Источник события различается по форме payload: полный payload —
+      check-ruler, сокращённый (без file и message) — budget-control.
     messages:
       - $ref: '#/channels/payRegister/messages/payRegisterFromRuler'
       - $ref: '#/channels/payRegister/messages/payRegisterFromBudgetControl'

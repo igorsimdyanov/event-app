@@ -1,0 +1,99 @@
+---
+ru:
+  date:
+    formats:
+      default: "%d.%m.%Y"
+      short: "%d %b"
+      long: "%d %B %Y"
+    day_names: [воскресенье, понедельник, вторник, среда, четверг, пятница, суббота]
+    abbr_day_names: [вс, пн, вт, ср, чт, пт, сб]
+    month_names:
+      - ~
+      - января
+      - февраля
+      - марта
+      - апреля
+      - мая
+      - июня
+      - июля
+      - августа
+      - сентября
+      - октября
+      - ноября
+      - декабря
+    abbr_month_names:
+      - ~
+      - янв.
+      - февр.
+      - марта
+      - апр.
+      - мая
+      - июня
+      - июля
+      - авг.
+      - сент.
+      - окт.
+      - нояб.
+      - дек.
+
+  time:
+    formats:
+      default: "%d.%m.%Y %H:%M:%S"
+      short: "%d.%m %H:%M"
+      long: "%d %B %Y, %H:%M:%S"
+    am: утра
+    pm: вечера
+
+  support:
+    array:
+      words_connector: ", "
+      two_words_connector: " и "
+      last_word_connector: " и "
+
+  number:
+    format:
+      separator: ","
+      delimiter: " "
+      precision: 2
+
+  views:
+    pagination:
+      first: "« Первая"
+      last: "Последняя »"
+      previous: "‹ Предыдущая"
+      next: "Следующая ›"
+      truncate: "…"
+
+  activerecord:
+    models:
+      rabbit_message:
+        one: RM-сообщение
+        few: RM-сообщения
+        many: RM-сообщений
+        other: RM-сообщения
+      check:
+        one: Чек
+        few: Чека
+        many: Чеков
+        other: Чеки
+    attributes:
+      check:
+        attachment_id: Correlation-id (attachment_id)
+        price: Стоимость
+        file: Изображение чека
+        approved: Одобрено
+        created_at: Создан
+        updated_at: Обновлён
+      rabbit_message:
+        directions:
+          income: Входящее
+          outcome: Исходящее
+        action: Действие
+        direction: Направление
+        routing_key: Ключ маршрутизации
+        data: Сообщение
+        success: Успех
+        error_message: Ошибка
+        error_backtrace: Стектрейс ошибки
+        created_at: Создано
+        updated_at: Обновлено
