@@ -29,7 +29,7 @@ RSpec.describe SneakersListener do
       it 'группирует событие по correlation-id' do
         worker.work_with_params(message, delivery_info, {})
 
-        expect(Receipt.find_by(attachment_id: attachment_id).events.count).to eq(1)
+        expect(Check.find_by(attachment_id: attachment_id).events.count).to eq(1)
       end
 
       it 'сохраняет ключ маршрутизации доставки' do
@@ -83,6 +83,52 @@ RSpec.describe SneakersListener do
         worker.work_with_params(message, delivery_info, {})
 
         expect(worker).to have_received(:reject!)
+      end
+
+      it 'не роняет воркер, если и запись об ошибке не сохранилась' do
+        expect { worker.work_with_params(message, delivery_info, {}) }.not_to raise_error
+      end
+    end
+
+    context 'когда соединение с базой данных потеряно' do
+      let(:connection) { ActiveRecord::Base.connection }
+
+      before do
+        allow(worker).to receive(:sleep)
+        allow(worker).to receive(:requeue!)
+        allow(connection).to receive(:reconnect!)
+        allow(Events::RegisterService).to receive(:call).and_raise(PG::ConnectionBad, 'connection lost')
+      end
+
+      it 'переподключается к базе данных' do
+        worker.work_with_params(message, delivery_info, {})
+
+        expect(connection).to have_received(:reconnect!)
+      end
+
+      it 'возвращает сообщение в очередь (requeue)' do
+        worker.work_with_params(message, delivery_info, {})
+
+        expect(worker).to have_received(:requeue!)
+      end
+
+      it 'не подтверждает и не отклоняет сообщение' do
+        worker.work_with_params(message, delivery_info, {})
+
+        expect(worker).not_to have_received(:ack!)
+        expect(worker).not_to have_received(:reject!)
+      end
+
+      it 'повторяет попытку, пока переподключение не удастся' do
+        attempts = 0
+        allow(connection).to receive(:reconnect!) do
+          attempts += 1
+          raise PG::UnableToSend, 'still down' if attempts < 3
+        end
+
+        worker.work_with_params(message, delivery_info, {})
+
+        expect(attempts).to eq(3)
       end
     end
   end

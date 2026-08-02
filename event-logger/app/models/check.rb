@@ -1,15 +1,20 @@
-class Receipt < ApplicationRecord
+class Check < ApplicationRecord
   include Ransackable
 
-  has_many :events, -> { chronological }, dependent: :destroy, inverse_of: :receipt
+  has_many :events, -> { chronological }, dependent: :destroy, inverse_of: :check
 
   validates :attachment_id, presence: true, uniqueness: true
 
   PUBLIC_FIELDS = %w[
-    id attachment_id file full_path price last_action events_count
+    id attachment_id attachment_id_text file full_path price last_action events_count
     failed_events_count first_event_at last_event_at created_at updated_at
   ]
   RANSACK_ASSOCIATIONS = %w[events]
+
+  # Поиск по части correlation-id: uuid-колонку нельзя сравнивать через LIKE
+  ransacker :attachment_id_text do
+    Arel.sql("#{table_name}.attachment_id::text")
+  end
 
   scope :recent, -> { order(last_event_at: :desc) }
 

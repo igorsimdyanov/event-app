@@ -2,10 +2,10 @@
 
 FactoryBot.define do
   factory :event do
-    receipt
-    attachment_id { receipt.attachment_id }
+    check
+    attachment_id { check.attachment_id }
     action { 'pay_register' }
-    routing_key { 'pay_register' }
+    routing_key { action }
     source { 'check-ruler' }
     occurred_at { Time.current }
     success { true }

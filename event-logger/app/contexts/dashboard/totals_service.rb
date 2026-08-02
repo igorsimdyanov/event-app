@@ -4,7 +4,7 @@ class Dashboard::TotalsService
 
   def call
     [
-      [ I18n.t('active_admin.dashboard_stats.receipts'), Receipt.count ],
+      [ I18n.t('active_admin.dashboard_stats.checks'), Check.count ],
       [ I18n.t('active_admin.dashboard_stats.events'), Event.count ],
       [ I18n.t('active_admin.dashboard_stats.failed_events'), Event.failed.count ],
       [ I18n.t('active_admin.dashboard_stats.last_event_at'), last_event_at ]

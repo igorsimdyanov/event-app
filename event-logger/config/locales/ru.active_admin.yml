@@ -2,11 +2,11 @@
 ru:
   active_admin:
     dashboard: Главная страница
-    receipts: Чеки
+    checks: Чеки
     events: События
     event_timeline: Хронология событий по чеку
     resources:
-      receipt:
+      check:
         one: Чек
     filters:
       correlation_id: Correlation-id (attachment_id)
@@ -19,8 +19,8 @@ ru:
       value: Значение
       by_action: События по действиям
       by_source: События по микросервисам
-      last_receipts: Последние чеки
-      receipts: Чеков
+      last_checks: Последние чеки
+      checks: Чеков
       events: Событий
       failed_events: Событий с ошибкой
       last_event_at: Последнее событие

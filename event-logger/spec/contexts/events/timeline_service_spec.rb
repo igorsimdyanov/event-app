@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe Events::TimelineService do
-  let(:receipt) { create(:receipt) }
-  let(:first) { create(:event, receipt: receipt, occurred_at: Time.zone.at(100)) }
-  let(:second) { create(:event, receipt: receipt, occurred_at: Time.zone.at(130)) }
+  let(:check) { create(:check) }
+  let(:first) { create(:event, check: check, occurred_at: Time.zone.at(100)) }
+  let(:second) { create(:event, check: check, occurred_at: Time.zone.at(130)) }
   let(:timeline) { described_class.call([ first, second ]) }
 
   it 'нумерует шаги обработки чека' do
@@ -19,7 +19,7 @@ RSpec.describe Events::TimelineService do
   end
 
   it 'обходится без задержки, если время события неизвестно' do
-    undated = create(:event, receipt: receipt, occurred_at: nil)
+    undated = create(:event, check: check, occurred_at: nil)
 
     expect(described_class.call([ first, undated ]).delay_of(undated)).to be_nil
   end
