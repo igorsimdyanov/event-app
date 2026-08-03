@@ -5,8 +5,18 @@ class SneakersListener
     recognize: Checks::RecognizeService,
   }.freeze
   QUEUE_NAME = Settings.sneakers.queue
+  QUEUE_DEAD_LETTER = "#{Settings.sneakers.queue}.error".freeze
+  # Сообщение, отклонённое обработчиком, обменник уводит в очередь ошибок (ADR-0009)
+  DEAD_LETTER_ARGUMENTS = {
+    'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
+    'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
+  }.freeze
+  ARGUMENTS = {
+    durable: true,
+    arguments: DEAD_LETTER_ARGUMENTS
+  }.freeze
 
-  from_queue Settings.sneakers.queue
+  from_queue Settings.sneakers.queue, queue_options: { arguments: DEAD_LETTER_ARGUMENTS }
 
   attr_reader :parsed_message
 

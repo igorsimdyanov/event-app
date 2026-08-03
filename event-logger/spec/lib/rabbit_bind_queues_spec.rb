@@ -26,5 +26,31 @@ RSpec.describe RabbitBindQueues do
 
       expect(queue).to have_received(:bind).with(exchange, hash_including(routing_key: '#'))
     end
+
+    it 'уводит отклонённые сообщения в очередь ошибок через обменник по умолчанию' do
+      described_class.create_for(SneakersListener)
+
+      expect(channel).to have_received(:queue).with(
+        SneakersListener::QUEUE_NAME,
+        hash_including(arguments: hash_including(
+          'x-dead-letter-exchange' => '',
+          'x-dead-letter-routing-key' => SneakersListener::QUEUE_DEAD_LETTER
+        ))
+      )
+    end
+
+    it 'объявляет устойчивую очередь ошибок' do
+      described_class.create_for(SneakersListener)
+
+      expect(channel).to have_received(:queue)
+        .with(SneakersListener::QUEUE_DEAD_LETTER, hash_including(durable: true))
+    end
+
+    it 'не привязывает очередь ошибок к обменнику services, иначе маска `#` вернула бы её сообщения' do
+      described_class.create_for(SneakersListener)
+
+      expect(queue).not_to have_received(:bind)
+        .with(exchange, hash_including(routing_key: SneakersListener::QUEUE_DEAD_LETTER))
+    end
   end
 end
