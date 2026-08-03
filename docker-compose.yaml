@@ -9,17 +9,28 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
+      # Метрики плагина rabbitmq_prometheus: Prometheus берёт их внутри сети,
+      # порт наружу нужен только для проверки руками
+      - "15692:15692"
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     hostname: prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+      # Перечитать конфигурацию без перезапуска контейнера:
+      # curl -X POST http://localhost:9090/-/reload
+      - --web.enable-lifecycle
     ports:
       - 9090:9090
     restart: unless-stopped
     environment:
       TZ: "Europe/Moscow"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - rabbitmq
   inbox:
     tty: true
     stdin_open: true
@@ -284,3 +295,7 @@ services:
     command: sh -c "sleep 10 && bundle exec rails sneakers:run"
     volumes:
       - ./event-logger:/rails
+
+volumes:
+  # История метрик должна переживать перезапуск контейнера Prometheus
+  prometheus-data:

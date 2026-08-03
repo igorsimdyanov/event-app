@@ -121,6 +121,11 @@ event-logger — из `BINDING_KEYS` (маска `#`, копия всего тр
 - ActiveAdmin **без авторизации** (`authentication_method` отключён), панель на `/admin`.
 - Модель `RabbitMessage` — журнал входящих и исходящих сообщений сервиса. В event-logger её нет:
   там журналом служат сами `events`.
+- `lib/metrics/` — экспортер метрик Prometheus (ADR-0010): собственный TCP-сокет в фоновом потоке
+  на порту 9394, поднимается из `config/initializers/metrics.rb`. Каталог исключён из автозагрузки
+  (`config.autoload_lib(ignore: %w[assets tasks metrics])`) и подключается через `require`: поток
+  переживает перезагрузку кода. `Metrics::ProcessInfo.kind` возвращает `nil` для консоли, rake-задач
+  и спеков — там экспортер не стартует и порт не занимает.
 - Две точки входа: `rails s` (панель) и `rails sneakers:run` (потребитель). В compose это два
   контейнера на одном образе: `<сервис>` и `<сервис>-sneakers`.
 
@@ -153,7 +158,31 @@ event-logger — из `BINDING_KEYS` (маска `#`, копия всего тр
 | budget-control | http://localhost:8004/admin |
 | event-logger | http://localhost:8005/admin |
 | RabbitMQ management | http://localhost:15672 (guest/guest) |
-| Prometheus | http://localhost:9090 (конфигурация по умолчанию) |
+| RabbitMQ метрики | http://localhost:15692/metrics |
+| Prometheus | http://localhost:9090 |
+
+Метрики каждого процесса микросервиса — на порту 9394 внутри сети compose
+(`docker compose exec check-manager-sneakers curl -s http://localhost:9394/metrics`), наружу не
+проброшены.
+
+## Мониторинг
+
+Конфигурация Prometheus — `prometheus/prometheus.yml`, монтируется в контейнер; после правки
+достаточно `curl -X POST http://localhost:9090/-/reload`. Решение описано в ADR-0010.
+
+Размеры очередей приходят от брокера: плагин `rabbitmq_prometheus` включён в RabbitMQ 4.x по
+умолчанию. **Разбивку по очередям даёт только `/metrics/detailed`** с явным перечнем семейств
+(`queue_coarse_metrics`, `queue_consumer_count`) — обычный `/metrics` агрегирует всё по узлу.
+Очереди ошибок размечаются меткой `dead_letter` через `metric_relabel_configs`.
+
+Работоспособность сервисы публикуют сами: `service_up`, `service_dependency_up`,
+`service_start_time_seconds` с метками `service` и `process` (`web`, `sneakers`, `jobs`).
+Метрика `up` от Prometheus говорит лишь, что процесс отвечает, `service_up` — что доступны
+его база и брокер.
+
+Добавляя цель, правь и список `services` в `prometheus/prometheus.yml`: цели перечислены явно,
+service discovery в стенде нет. yandex-vision в корневом compose не запущен и в списке
+отсутствует — иначе цель висела бы вечно в состоянии down.
 
 ## Конвенции, о которых легко споткнуться
 
@@ -178,6 +207,7 @@ event-logger — из `BINDING_KEYS` (маска `#`, копия всего тр
 ## Документация
 
 - `docs/adr/` — архитектурные решения (брокер, кто создаёт топики, correlation-id, формат сообщения,
-  почта, отказ от TTL и временных ссылок, слой бизнес-логики). Читай их перед изменением контрактов.
+  почта, отказ от TTL и временных ссылок, слой бизнес-логики, очереди ошибок, мониторинг).
+  Читай их перед изменением контрактов.
 - `docs/asyncapi.yaml` — спецификация обмена, HTML генерируется командой из `readme.md`.
 - `readme.md` в корне — обзор и порядок запуска; в каждом микросервисе свой `readme.md`.
