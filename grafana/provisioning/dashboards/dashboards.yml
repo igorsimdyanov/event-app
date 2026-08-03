@@ -1,0 +1,16 @@
+# Дашборды хранятся в репозитории как код и подхватываются из каталога.
+# Правки через интерфейс не сохранятся: при перезапуске Grafana вернёт
+# содержимое файлов, поэтому менять дашборд нужно в grafana/dashboards/*.json
+apiVersion: 1
+
+providers:
+  - name: event-app
+    orgId: 1
+    folder: Конвейер чеков
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

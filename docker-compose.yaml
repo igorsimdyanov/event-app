@@ -6,12 +6,21 @@ services:
       POSTGRES_PASSWORD: 'postgres'
   rabbitmq:
     image: rabbitmq:4.2-management-alpine
+    # Обязательно вместе с томом: брокер хранит данные в каталоге, названном
+    # по имени узла (rabbit@<hostname>). У пересозданного контейнера hostname
+    # новый, и без этой строки брокер завёл бы пустой узел рядом со старым
+    hostname: rabbitmq
     ports:
       - "15672:15672"
       - "5672:5672"
       # Метрики плагина rabbitmq_prometheus: Prometheus берёт их внутри сети,
       # порт наружу нужен только для проверки руками
       - "15692:15692"
+    volumes:
+      # Очереди, обменники, привязки и накопленные сообщения переживают
+      # пересоздание контейнера. RabbitMQ 4.x пишет на диск и сообщения,
+      # опубликованные без флага persistent
+      - rabbitmq-data:/var/lib/rabbitmq
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -21,6 +30,9 @@ services:
       # Перечитать конфигурацию без перезапуска контейнера:
       # curl -X POST http://localhost:9090/-/reload
       - --web.enable-lifecycle
+      # sort_by_label в дашбордах Grafana: без него порядок плашек в панелях
+      # меняется от обновления к обновлению
+      - --enable-feature=promql-experimental-functions
     ports:
       - 9090:9090
     restart: unless-stopped
@@ -31,6 +43,28 @@ services:
       - prometheus-data:/prometheus
     depends_on:
       - rabbitmq
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    hostname: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+      GF_SECURITY_ADMIN_USER: 'admin'
+      GF_SECURITY_ADMIN_PASSWORD: 'admin'
+      # Как и панели ActiveAdmin, стенд открыт без авторизации: дашборды
+      # видны сразу, вход нужен только чтобы что-то изменить
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: 'Viewer'
+      GF_USERS_DEFAULT_LANGUAGE: 'ru-RU'
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
   inbox:
     tty: true
     stdin_open: true
@@ -297,5 +331,9 @@ services:
       - ./event-logger:/rails
 
 volumes:
+  # Очереди и привязки не должны пропадать вместе с контейнером брокера
+  rabbitmq-data:
   # История метрик должна переживать перезапуск контейнера Prometheus
   prometheus-data:
+  # Дашборды приходят из репозитория, но своё состояние Grafana хранит здесь
+  grafana-data:
