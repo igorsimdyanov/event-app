@@ -45,7 +45,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**[Микросервисы](/d/event-app-services)** — какой процесс не работает &nbsp;·&nbsp;\n**[Очереди ошибок](/d/event-app-dead-letters)** — где застряли сообщения &nbsp;·&nbsp;\n**[Очереди детально](/d/event-app-queues)** — что происходит с конкретной очередью &nbsp;·&nbsp;\n**[Брокер RabbitMQ](/d/event-app-rabbitmq)** — здоров ли сам брокер\n\nСтенд: [RabbitMQ](http://localhost:15672) &nbsp;·&nbsp; [Prometheus](http://localhost:9090) &nbsp;·&nbsp;\nпанели сервисов: [check-manager](http://localhost:8001/admin) &nbsp;·&nbsp;\n[check-ruler](http://localhost:8002/admin) &nbsp;·&nbsp;\n[check-register](http://localhost:8003/admin) &nbsp;·&nbsp;\n[budget-control](http://localhost:8004/admin) &nbsp;·&nbsp;\n[event-logger](http://localhost:8005/admin)"
+        "content": "**[Микросервисы](/d/event-app-services)** — какой процесс не работает &nbsp;·&nbsp;\n**[Очереди ошибок](/d/event-app-dead-letters)** — где застряли сообщения &nbsp;·&nbsp;\n**[Очереди детально](/d/event-app-queues)** — что происходит с конкретной очередью &nbsp;·&nbsp;\n**[Брокер RabbitMQ](/d/event-app-rabbitmq)** — здоров ли сам брокер\n\nСтенд: [RabbitMQ](http://localhost:15672) &nbsp;·&nbsp; [Prometheus](http://localhost:9090) &nbsp;·&nbsp;\n[Zipkin](http://localhost:9411) — путь одного чека во времени &nbsp;·&nbsp;\nпанели сервисов: [check-manager](http://localhost:8001/admin) &nbsp;·&nbsp;\n[check-ruler](http://localhost:8002/admin) &nbsp;·&nbsp;\n[check-register](http://localhost:8003/admin) &nbsp;·&nbsp;\n[budget-control](http://localhost:8004/admin) &nbsp;·&nbsp;\n[event-logger](http://localhost:8005/admin)"
       }
     },
     {

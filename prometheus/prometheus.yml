@@ -72,3 +72,12 @@ scrape_configs:
         regex: '.+\.error'
         target_label: dead_letter
         replacement: 'true'
+
+  # Коллектор трасс (ADR-0011): сколько спанов он принял и сколько
+  # отбросил. Метрики отдаёт актуатор Spring Boot, поэтому путь
+  # отличается от привычного /metrics
+  - job_name: zipkin
+    metrics_path: /prometheus
+    static_configs:
+      - targets:
+          - 'zipkin:9411'

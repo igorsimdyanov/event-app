@@ -47,6 +47,7 @@ docker compose exec -e RAILS_ENV=test event-logger bundle exec rspec spec/models
 docker compose exec event-logger bundle exec rails runner 'puts Check.count'
 docker compose exec event-logger bundle exec rake fake_message:start   # тестовое сообщение в очередь сервиса
 npx -y @asyncapi/cli validate docs/asyncapi.yaml
+curl -s http://localhost:9411/api/v2/trace/$(echo <attachment_id> | tr -d -)   # трасса чека
 ```
 
 **RuboCop не запускается**: установленная версия не знает Ruby 4.0 (`unknown Ruby version 4.0
@@ -110,8 +111,9 @@ docker-compose: каталог данных называется по имени
 сгенерированный сервис получит старое поведение.
 
 - `app/workers/*_listener.rb` — потребитель Sneakers (гем `kicks`). Константы `ACTION_HANDLERS`
-  (action → сервис-объект) и `QUEUE_NAME`; метод `work` парсит JSON, вызывает обработчик и делает
-  `ack!`, при ошибке — `reject!`. В сервисах с БД воркер дополнительно пишет входящее `RabbitMessage`
+  (action → сервис-объект) и `QUEUE_NAME`; метод `work_with_params` парсит JSON, вызывает обработчик
+  и делает `ack!`, при ошибке — `reject!`. Третий аргумент (properties) нужен ради заголовков
+  трассировки: тело сообщения их не содержит. В сервисах с БД воркер дополнительно пишет входящее `RabbitMessage`
   и помечает его неуспешным при исключении, а ошибки Postgres из `PG_EXCEPTION` обрабатывает отдельно:
   переподключение и `requeue!`. У tesseract и yandex-vision БД нет, поэтому воркер короче.
 - `lib/rabbit_messages/` — набор файлов зависит от роли сервиса: `Send` + `BaseAmqp` (публикация,
@@ -133,6 +135,10 @@ docker-compose: каталог данных называется по имени
   (`config.autoload_lib(ignore: %w[assets tasks metrics])`) и подключается через `require`: поток
   переживает перезагрузку кода. `Metrics::ProcessInfo.kind` возвращает `nil` для консоли, rake-задач
   и спеков — там экспортер не стартует и порт не занимает.
+- `lib/tracing/` — отправка спанов в Zipkin (ADR-0011): фасад `Tracing` с `consumer_span`
+  и `producer_span`, контекст B3, фоновый репортер. Подключается так же, как метрики
+  (`config/initializers/tracing.rb`, каталог исключён из автозагрузки) и по тому же признаку
+  не стартует в консоли, rake-задачах и спеках. У inbox нет `consumer.rb`: он ничего не потребляет.
 - Две точки входа: `rails s` (панель) и `rails sneakers:run` (потребитель). В compose это два
   контейнера на одном образе: `<сервис>` и `<сервис>-sneakers`.
 
@@ -168,6 +174,7 @@ docker-compose: каталог данных называется по имени
 | RabbitMQ метрики | http://localhost:15692/metrics |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 (просмотр без входа, admin/admin для правок) |
+| Zipkin | http://localhost:9411 (трассы, поиск по `attachment_id`) |
 
 Метрики каждого процесса микросервиса — на порту 9394 внутри сети compose
 (`docker compose exec check-manager-sneakers curl -s http://localhost:9394/metrics`), наружу не
@@ -206,6 +213,31 @@ docker-compose), ссылки на соседние дашборды лежат 
 в шапке собирается по тегу `event-app`, поэтому новый дашборд с этим тегом попадает в навигацию
 сам — а вот ссылку в текстовую панель нужно дописать руками.
 
+## Трассировка
+
+Путь одного чека во времени показывает Zipkin (http://localhost:9411), решение описано
+в ADR-0011. **Идентификатор трассы — это `attachment_id` без дефисов**: UUID даёт ровно 32
+шестнадцатеричные цифры, то есть готовый 128-битный `traceId`, поэтому номер вложения
+из админки ищется в Zipkin как есть.
+
+Контекст едет заголовками B3 (`X-B3-TraceId` и соседние) в properties AMQP-сообщения, а не
+в конверте: контракт сообщения (ADR-0005) и `docs/asyncapi.yaml` от трассировки не зависят.
+Сообщение без заголовков (публикация из rake-задачи, возврат из очереди ошибок) трассу не рвёт —
+она склеивается по `attachment_id`, но родителя у спана не будет.
+
+Спанов два вида: `publish <routing_key>` (публикация, из `RabbitMessages::Send`) и
+`receive <routing_key>` (обработка, из `Tracing::Consumer#trace_message` в воркере). Теги —
+`action`, `attachment_id`, `queue`, `process`, а при исключении `error` с текстом ошибки.
+
+**Sneakers запускает воркеров форком, а потоки fork не переживают**: `Tracing::Reporter`
+сравнивает `Process.pid` с pid владельца и поднимает поток отправки в потомке заново. Если
+трогаешь репортер — проверяй спаны именно из `<сервис>-sneakers`, а не из веб-процесса: там
+fork'а нет и ошибка не проявится.
+
+Метрики самого коллектора собираются целью `zipkin` в `prometheus/prometheus.yml`
+(`metrics_path: /prometheus`, актуатор Spring Boot): `zipkin_collector_spans_dropped_total`
+покажет, что коллектор не справляется.
+
 ## Конвенции, о которых легко споткнуться
 
 - **Локализация.** Гема `rails-i18n` в проекте нет. Русская локаль работает за счёт
@@ -229,7 +261,7 @@ docker-compose), ссылки на соседние дашборды лежат 
 ## Документация
 
 - `docs/adr/` — архитектурные решения (брокер, кто создаёт топики, correlation-id, формат сообщения,
-  почта, отказ от TTL и временных ссылок, слой бизнес-логики, очереди ошибок, мониторинг).
-  Читай их перед изменением контрактов.
+  почта, отказ от TTL и временных ссылок, слой бизнес-логики, очереди ошибок, мониторинг,
+  распределённая трассировка). Читай их перед изменением контрактов.
 - `docs/asyncapi.yaml` — спецификация обмена, HTML генерируется командой из `readme.md`.
 - `readme.md` в корне — обзор и порядок запуска; в каждом микросервисе свой `readme.md`.

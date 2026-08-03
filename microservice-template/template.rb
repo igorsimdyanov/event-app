@@ -93,6 +93,24 @@ class ::RailsTemplate < Thor::Group
               'config.autoload_lib(ignore: %w[assets tasks metrics])'
   end
 
+  # Спаны в Zipkin отправляет каждый процесс, который принимает или
+  # публикует сообщения, поэтому трассировка тоже входит в общий каркас.
+  # Из автозагрузки каталог исключается по той же причине, что и метрики:
+  # репортер держит фоновый поток, переживающий перезагрузку кода
+  def configure_tracing
+    copy_file 'config/initializers/tracing.rb'
+    copy_file 'lib/tracing/trace_context.rb'
+    copy_file 'lib/tracing/span.rb'
+    copy_file 'lib/tracing/null_span.rb'
+    copy_file 'lib/tracing/reporter.rb'
+    copy_file 'lib/tracing/consumer.rb'
+    copy_file 'lib/tracing/tracer.rb'
+
+    gsub_file 'config/application.rb',
+              'config.autoload_lib(ignore: %w[assets tasks metrics])',
+              'config.autoload_lib(ignore: %w[assets tasks metrics tracing])'
+  end
+
   def configure_gitignore
     copy_file '.gitignore', force: true
   end

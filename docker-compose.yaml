@@ -68,6 +68,20 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    hostname: zipkin
+    ports:
+      - 9411:9411
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+      # Трассы лежат в памяти процесса и пропадают с перезапуском контейнера:
+      # на стенде они живут минуты, а внешнее хранилище (Elasticsearch,
+      # Cassandra) стоило бы дороже самого конвейера
+      STORAGE_TYPE: 'mem'
+      MEM_MAX_SPANS: '500000'
   inbox:
     tty: true
     stdin_open: true
@@ -82,6 +96,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS_JSON: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -105,6 +120,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -127,6 +143,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -144,6 +161,7 @@ services:
       ./tesseract/.env
     environment:
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - rabbitmq
     command: sh -c "sleep 10 && bundle exec rails sneakers:run"
@@ -165,6 +183,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -187,6 +206,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -209,6 +229,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -231,6 +252,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
       RABBITMQ_VHOST: '/'
       RABBITMQ_USER: 'guest'
       RABBITMQ_PASSWORD: 'guest'
@@ -256,6 +278,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -278,6 +301,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
     depends_on:
       - db
       - rabbitmq
@@ -300,6 +324,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
       SNEAKERS_QUEUE: 'event_logger.in'
       SNEAKERS_BINDING_KEY: '#'
     depends_on:
@@ -324,6 +349,7 @@ services:
       DB_USER: 'postgres'
       DB_PASSWORD: 'postgres'
       RABBITMQ_HOSTS: 'rabbitmq'
+      ZIPKIN_HOST: 'zipkin'
       SNEAKERS_QUEUE: 'event_logger.in'
       SNEAKERS_BINDING_KEY: '#'
     depends_on:

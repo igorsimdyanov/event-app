@@ -194,6 +194,7 @@ NAVIGATION_PANEL = """
 **[Брокер RabbitMQ](/d/event-app-rabbitmq)** — здоров ли сам брокер
 
 Стенд: [RabbitMQ](http://localhost:15672) &nbsp;·&nbsp; [Prometheus](http://localhost:9090) &nbsp;·&nbsp;
+[Zipkin](http://localhost:9411) — путь одного чека во времени &nbsp;·&nbsp;
 панели сервисов: [check-manager](http://localhost:8001/admin) &nbsp;·&nbsp;
 [check-ruler](http://localhost:8002/admin) &nbsp;·&nbsp;
 [check-register](http://localhost:8003/admin) &nbsp;·&nbsp;
