@@ -78,6 +78,21 @@ class ::RailsTemplate < Thor::Group
     copy_file 'lib/callable.rb', force: true
   end
 
+  # Метрики Prometheus отдаёт каждый долгоживущий процесс сервиса — и панель,
+  # и потребитель сообщений, поэтому экспортер входит в общий каркас.
+  # Из автозагрузки каталог исключается: экспортер держит фоновый поток,
+  # который переживает перезагрузку кода в development
+  def configure_metrics
+    copy_file 'config/initializers/metrics.rb'
+    copy_file 'lib/metrics/process_info.rb'
+    copy_file 'lib/metrics/health.rb'
+    copy_file 'lib/metrics/exporter.rb'
+
+    gsub_file 'config/application.rb',
+              'config.autoload_lib(ignore: %w[assets tasks])',
+              'config.autoload_lib(ignore: %w[assets tasks metrics])'
+  end
+
   def configure_gitignore
     copy_file '.gitignore', force: true
   end

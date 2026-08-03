@@ -12,6 +12,11 @@ rabbitmq:
   exchange: <%= ENV.fetch('RABBITMQ_EXCHANGE', 'services') %>
   exchange_type: <%= ENV.fetch('RABBITMQ_EXCHANGE_TYPE', 'topic') %>
 
+metrics:
+  enabled: <%= ENV.fetch('METRICS_ENABLED') { true } %>
+  port: <%= ENV.fetch('METRICS_PORT') { 9394 } %>
+  check_lifetime: <%= ENV.fetch('METRICS_CHECK_LIFETIME') { 10 } %>
+
 sneakers:
   workers: <%= ENV.fetch('SNEAKERS_WORKERS') { 1 } %>
   threads: <%= ENV.fetch('SNEAKERS_THREADS') { 1 } %>

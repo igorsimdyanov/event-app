@@ -43,6 +43,44 @@ npx -y @asyncapi/cli generate fromTemplate docs/asyncapi.yaml @asyncapi/html-tem
 npx -y @asyncapi/cli validate docs/asyncapi.yaml
 ```
 
+## Наблюдение за системой
+
+Метрики собирает Prometheus — http://localhost:9090. Конфигурация лежит в
+`prometheus/prometheus.yml` и монтируется в контейнер; после её правки достаточно
+перечитать конфигурацию, не перезапуская контейнер:
+
+```bash
+curl -X POST http://localhost:9090/-/reload
+```
+
+Собираются данные из двух источников (подробности — в `docs/adr/0010-monitoring.md`).
+
+**Размеры очередей** отдаёт сам брокер: плагин `rabbitmq_prometheus` включён в
+RabbitMQ по умолчанию и слушает порт 15692. Разбивка по очередям приходит с
+endpoint `/metrics/detailed`, очереди ошибок размечены меткой `dead_letter`:
+
+```promql
+rabbitmq_detailed_queue_messages                      # глубина всех очередей
+rabbitmq_detailed_queue_messages{dead_letter="true"}  # накопившиеся ошибки
+rabbitmq_detailed_queue_consumers == 0                # очередь без потребителя
+```
+
+**Работоспособность** сообщает каждый долгоживущий процесс микросервиса —
+и панель, и потребитель сообщений, и планировщик заданий inbox. Все они отдают
+метрики на порту 9394 и различаются метками `service` и `process`:
+
+```promql
+service_up                       # 1 — все зависимости процесса доступны
+service_up == 0                  # процессы с недоступной базой или брокером
+service_dependency_up            # доступность postgresql и rabbitmq по отдельности
+```
+
+Посмотреть метрики отдельного процесса можно и напрямую:
+
+```bash
+docker compose exec check-manager-sneakers curl -s http://localhost:9394/metrics
+```
+
 ## Вспомогательные папки проекта
 
 Некоторые папки не используются непосредственно для запуска приложения:

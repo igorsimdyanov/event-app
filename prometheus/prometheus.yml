@@ -1,0 +1,67 @@
+# Сбор метрик конвейера обработки чеков.
+#
+# Цели живут в сети docker-compose, поэтому адресуются именами сервисов.
+# Порты наружу для этого пробрасывать не нужно.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - 'localhost:9090'
+
+  # Работоспособность микросервисов. Метрики отдаёт каждый долгоживущий
+  # процесс на порту 9394, поэтому у сервиса с панелью и потребителем две
+  # цели: различить их можно по метке process в самих метриках.
+  #
+  # yandex-vision в корневом docker-compose не поднимается, его очередь
+  # существует без потребителей — цели для него здесь нет
+  - job_name: services
+    static_configs:
+      - targets:
+          - 'inbox:9394'
+          - 'check-manager:9394'
+          - 'check-manager-sneakers:9394'
+          - 'tesseract-sneakers:9394'
+          - 'check-ruler:9394'
+          - 'check-ruler-sneakers:9394'
+          - 'check-register:9394'
+          - 'check-register-sneakers:9394'
+          - 'budget-control:9394'
+          - 'budget-control-sneakers:9394'
+          - 'event-logger:9394'
+          - 'event-logger-sneakers:9394'
+
+  # Состояние брокера целиком: узел, соединения, каналы, обменники
+  - job_name: rabbitmq
+    static_configs:
+      - targets:
+          - 'rabbitmq:15692'
+
+  # Размер очередей. Агрегированный /metrics суммирует всё по узлу, разбивку
+  # по очередям даёт только /metrics/detailed с явным перечнем семейств:
+  #   rabbitmq_detailed_queue_messages          — глубина очереди
+  #   rabbitmq_detailed_queue_messages_ready    — готовы к выдаче
+  #   rabbitmq_detailed_queue_messages_unacked  — выданы, но не подтверждены
+  #   rabbitmq_detailed_queue_consumers         — подписчики очереди
+  - job_name: rabbitmq-queues
+    metrics_path: /metrics/detailed
+    params:
+      family:
+        - queue_coarse_metrics
+        - queue_consumer_count
+    static_configs:
+      - targets:
+          - 'rabbitmq:15692'
+    # Парные очереди ошибок (ADR-0009) помечаются отдельно, чтобы застрявшие
+    # сообщения выбирались одним запросом:
+    #   rabbitmq_detailed_queue_messages{dead_letter="true"} > 0
+    metric_relabel_configs:
+      - target_label: dead_letter
+        replacement: 'false'
+      - source_labels: [queue]
+        regex: '.+\.error'
+        target_label: dead_letter
+        replacement: 'true'
