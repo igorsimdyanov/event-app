@@ -1,5 +1,6 @@
 class SneakersListener
   include Sneakers::Worker
+  include Tracing::Consumer
 
   QUEUE_NAME = Settings.sneakers.queue
   QUEUE_DEAD_LETTER = "#{Settings.sneakers.queue}.error".freeze
@@ -31,12 +32,15 @@ class SneakersListener
   attr_reader :parsed_message, :raw_message, :routing_key
 
   # Маршрутный ключ доставки берётся из delivery_info: он точнее поля
-  # routing_key в конверте и различает ответы, отправленные через reply_to
-  def work_with_params(message, delivery_info, _metadata)
+  # routing_key в конверте и различает ответы, отправленные через reply_to.
+  # В properties приезжает контекст трассировки — заголовки B3 (ADR-0011)
+  def work_with_params(message, delivery_info, metadata)
     @raw_message = message
     @routing_key = delivery_info&.routing_key
     parse_message(message)
-    ActiveRecord::Base.connection_pool.with_connection { register_event }
+    trace_message(delivery_info, metadata, parsed_message) do
+      ActiveRecord::Base.connection_pool.with_connection { register_event }
+    end
     ack!
   rescue *PG_EXCEPTION => e
     reconnect_to_database(e)

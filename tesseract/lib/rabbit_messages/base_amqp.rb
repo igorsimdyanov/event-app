@@ -15,7 +15,7 @@ module RabbitMessages
     end
 
     class AmqpStub
-      def publish(_arg1, _arg2)
+      def publish(_payload, **_options)
         Rails.logger.info('Warning!!! Skipping sending AMQP message in dev environment!')
       end
     end

@@ -28,10 +28,15 @@ module RabbitMessages
 
     private
 
+    # Заголовки B3 берутся у спана публикации: по ним получатель продолжит
+    # трассу отправителя, не заглядывая в тело сообщения (ADR-0011)
     def publish_exchange(payload)
       logging_message(payload)
       exchange = find_exchange(EXCHANGE)
-      exchange.publish(payload.to_json, routing_key: routing_key)
+
+      Tracing.producer_span("publish #{routing_key}", message: payload) do |span|
+        exchange.publish(payload.to_json, routing_key: routing_key, headers: span.headers)
+      end
     end
 
     def logging_message(payload)

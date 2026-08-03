@@ -1,6 +1,7 @@
 class InboxListener
   include Sneakers::Worker
   include RabbitMessages::Logging
+  include Tracing::Consumer
 
   ACTION_HANDLERS = {
     attachment_registered: Checks::RecognizeService
@@ -29,9 +30,13 @@ class InboxListener
 
   attr_reader :parsed_message
 
-  def work(message)
+  # Контекст трассировки едет в заголовках B3 (ADR-0011), поэтому воркеру
+  # нужны properties сообщения, а не одно только тело
+  def work_with_params(message, delivery_info, metadata)
     parse_message(message)
-    ActiveRecord::Base.connection_pool.with_connection { process_message }
+    trace_message(delivery_info, metadata, parsed_message) do
+      ActiveRecord::Base.connection_pool.with_connection { process_message }
+    end
     ack!
   rescue Net::ReadTimeout, Errno::ECONNRESET => e
     logger.info("Listener worker - requeue: #{parsed_message}")

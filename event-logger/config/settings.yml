@@ -17,6 +17,11 @@ metrics:
   port: <%= ENV.fetch('METRICS_PORT') { 9394 } %>
   check_lifetime: <%= ENV.fetch('METRICS_CHECK_LIFETIME') { 10 } %>
 
+tracing:
+  enabled: <%= ENV.fetch('TRACING_ENABLED') { true } %>
+  host: <%= ENV.fetch('ZIPKIN_HOST', 'localhost') %>
+  port: <%= ENV.fetch('ZIPKIN_PORT') { 9411 } %>
+
 sneakers:
   workers: <%= ENV.fetch('SNEAKERS_WORKERS') { 1 } %>
   threads: <%= ENV.fetch('SNEAKERS_THREADS') { 1 } %>

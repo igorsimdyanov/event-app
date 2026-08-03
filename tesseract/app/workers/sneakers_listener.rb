@@ -1,5 +1,6 @@
 class SneakersListener
   include Sneakers::Worker
+  include Tracing::Consumer
 
   ACTION_HANDLERS = {
     recognize: Checks::RecognizeService,
@@ -20,9 +21,11 @@ class SneakersListener
 
   attr_reader :parsed_message
 
-  def work(message)
+  # Контекст трассировки едет в заголовках B3 (ADR-0011), поэтому воркеру
+  # нужны properties сообщения, а не одно только тело
+  def work_with_params(message, delivery_info, metadata)
     parse_message(message)
-    process_message
+    trace_message(delivery_info, metadata, parsed_message) { process_message }
     ack!
   rescue StandardError => e
     Rails.logger.error(e.message)

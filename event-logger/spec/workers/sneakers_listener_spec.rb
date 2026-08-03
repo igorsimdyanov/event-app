@@ -14,6 +14,7 @@ RSpec.describe SneakersListener do
   end
   let(:message) { parsed_message.to_json }
   let(:delivery_info) { instance_double(Bunny::DeliveryInfo, routing_key: 'pay_register') }
+  let(:metadata) { instance_double(Bunny::MessageProperties, headers: nil) }
 
   before do
     allow(worker).to receive(:ack!)
@@ -23,23 +24,24 @@ RSpec.describe SneakersListener do
   describe '#work_with_params' do
     context 'когда сообщение разобрано' do
       it 'регистрирует событие' do
-        expect { worker.work_with_params(message, delivery_info, {}) }.to change(Event, :count).by(1)
+        expect { worker.work_with_params(message, delivery_info, metadata) }
+          .to change(Event, :count).by(1)
       end
 
       it 'группирует событие по correlation-id' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(Check.find_by(attachment_id: attachment_id).events.count).to eq(1)
       end
 
       it 'сохраняет ключ маршрутизации доставки' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(Event.order(:created_at).last.routing_key).to eq('pay_register')
       end
 
       it 'подтверждает обработку сообщения (ack)' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(worker).to have_received(:ack!)
       end
@@ -49,7 +51,7 @@ RSpec.describe SneakersListener do
       let(:message) { 'не json' }
 
       it 'фиксирует сбой в журнале событий' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(Event.order(:created_at).last).to have_attributes(
           action: described_class::UNPARSABLE_ACTION,
@@ -58,19 +60,19 @@ RSpec.describe SneakersListener do
       end
 
       it 'сохраняет исходное сообщение' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(Event.order(:created_at).last.payload).to include('raw' => 'не json')
       end
 
       it 'отклоняет сообщение (reject)' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(worker).to have_received(:reject!)
       end
 
       it 'не подтверждает обработку' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(worker).not_to have_received(:ack!)
       end
@@ -80,13 +82,13 @@ RSpec.describe SneakersListener do
       before { allow(Events::RegisterService).to receive(:call).and_raise(StandardError, 'Сбой записи') }
 
       it 'отклоняет сообщение (reject)' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(worker).to have_received(:reject!)
       end
 
       it 'не роняет воркер, если и запись об ошибке не сохранилась' do
-        expect { worker.work_with_params(message, delivery_info, {}) }.not_to raise_error
+        expect { worker.work_with_params(message, delivery_info, metadata) }.not_to raise_error
       end
     end
 
@@ -101,19 +103,19 @@ RSpec.describe SneakersListener do
       end
 
       it 'переподключается к базе данных' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(connection).to have_received(:reconnect!)
       end
 
       it 'возвращает сообщение в очередь (requeue)' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(worker).to have_received(:requeue!)
       end
 
       it 'не подтверждает и не отклоняет сообщение' do
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(worker).not_to have_received(:ack!)
         expect(worker).not_to have_received(:reject!)
@@ -126,7 +128,7 @@ RSpec.describe SneakersListener do
           raise PG::UnableToSend, 'still down' if attempts < 3
         end
 
-        worker.work_with_params(message, delivery_info, {})
+        worker.work_with_params(message, delivery_info, metadata)
 
         expect(attempts).to eq(3)
       end
