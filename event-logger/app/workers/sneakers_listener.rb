@@ -2,8 +2,20 @@ class SneakersListener
   include Sneakers::Worker
 
   QUEUE_NAME = Settings.sneakers.queue
+  QUEUE_DEAD_LETTER = "#{Settings.sneakers.queue}.error".freeze
   # Маска маршрутных ключей: сервис собирает все события обменника services
   BINDING_KEYS = Array(Settings.sneakers.binding_key).freeze
+  # Отклонённые сообщения уходят в очередь ошибок через обменник по умолчанию,
+  # а не через services: очередь журнала слушает маску `#` и приняла бы
+  # собственное dead-letter-сообщение обратно, зациклив его (ADR-0009)
+  DEAD_LETTER_ARGUMENTS = {
+    'x-dead-letter-exchange' => '',
+    'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
+  }.freeze
+  ARGUMENTS = {
+    durable: true,
+    arguments: DEAD_LETTER_ARGUMENTS
+  }.freeze
   UNPARSABLE_ACTION = 'unparsable_message'.freeze
   PG_EXCEPTION = [
     ActiveRecord::ConnectionNotEstablished,
@@ -14,7 +26,7 @@ class SneakersListener
     PG::UnableToSend
   ].freeze
 
-  from_queue Settings.sneakers.queue
+  from_queue Settings.sneakers.queue, queue_options: { arguments: DEAD_LETTER_ARGUMENTS }
 
   attr_reader :parsed_message, :raw_message, :routing_key
 

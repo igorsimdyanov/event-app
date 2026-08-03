@@ -15,7 +15,7 @@ RSpec.describe RabbitBindQueues do
         .with(Settings.rabbitmq.exchange, hash_including(type: Settings.rabbitmq.exchange_type, durable: true))
     end
 
-    context 'для воркера без dead-letter очереди (RecognizerListener)' do
+    context 'очередь результатов распознавания (RecognizerListener)' do
       it 'объявляет основную очередь воркера' do
         described_class.create_for(RecognizerListener)
         expect(channel).to have_received(:queue).with('recognizer.out', hash_including(durable: true))
@@ -26,13 +26,39 @@ RSpec.describe RabbitBindQueues do
         expect(queue).to have_received(:bind).with(exchange, hash_including(routing_key: :recognized_result))
       end
 
-      it 'не объявляет dead-letter очередь' do
+      it 'уводит отклонённые сообщения в очередь ошибок' do
         described_class.create_for(RecognizerListener)
-        expect(channel).not_to have_received(:queue).with('recognizer.out.error', anything)
+
+        expect(channel).to have_received(:queue).with(
+          'recognizer.out',
+          hash_including(arguments: hash_including(
+            'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
+            'x-dead-letter-routing-key' => 'recognizer.out.error'
+          ))
+        )
+      end
+
+      it 'объявляет и привязывает очередь ошибок' do
+        described_class.create_for(RecognizerListener)
+
+        expect(channel).to have_received(:queue).with('recognizer.out.error', hash_including(durable: true))
+        expect(queue).to have_received(:bind).with(exchange, hash_including(routing_key: 'recognizer.out.error'))
       end
     end
 
-    context 'для воркера с dead-letter очередью (InboxListener)' do
+    context 'очередь зарегистрированных вложений (InboxListener)' do
+      it 'уводит отклонённые сообщения в очередь ошибок' do
+        described_class.create_for(InboxListener)
+
+        expect(channel).to have_received(:queue).with(
+          'inbox.out',
+          hash_including(arguments: hash_including(
+            'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
+            'x-dead-letter-routing-key' => 'inbox.out.error'
+          ))
+        )
+      end
+
       it 'дополнительно объявляет dead-letter очередь' do
         described_class.create_for(InboxListener)
         expect(channel).to have_received(:queue).with('inbox.out.error', hash_including(durable: true))

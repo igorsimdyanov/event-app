@@ -6,14 +6,16 @@ class InboxListener
     attachment_registered: Checks::RecognizeService
   }.freeze
   QUEUE_NAME = Settings.sneakers.inbox_queue
-  QUEUE_DEAD_LETTER = Settings.sneakers.inbox_queue + '.error'
+  QUEUE_DEAD_LETTER = "#{Settings.sneakers.inbox_queue}.error".freeze
+  # Сообщение, отклонённое обработчиком, обменник уводит в очередь ошибок (ADR-0009)
+  DEAD_LETTER_ARGUMENTS = {
+    'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
+    'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
+  }.freeze
   ARGUMENTS = {
     durable: true,
-    arguments: {
-      'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
-      'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
-    }
-  }
+    arguments: DEAD_LETTER_ARGUMENTS
+  }.freeze
   PG_EXCEPTION = [
     ActiveRecord::ConnectionNotEstablished,
     ActiveRecord::ConnectionTimeoutError,
@@ -23,15 +25,7 @@ class InboxListener
     PG::UnableToSend
   ].freeze
 
-  from_queue(
-    Settings.sneakers.inbox_queue,
-    queue_options: {
-      arguments: {
-        'x-dead-letter-exchange' => Settings.rabbitmq.exchange,
-        'x-dead-letter-routing-key' => QUEUE_DEAD_LETTER
-      }
-    }
-  )
+  from_queue Settings.sneakers.inbox_queue, queue_options: { arguments: DEAD_LETTER_ARGUMENTS }
 
   attr_reader :parsed_message
 
