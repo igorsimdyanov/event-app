@@ -17,13 +17,43 @@
   "templating": {
     "list": []
   },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Дашборды",
+      "tags": [
+        "event-app"
+      ],
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "url": "",
+      "tooltip": ""
+    }
+  ],
   "panels": [
+    {
+      "type": "text",
+      "title": "Куда смотреть дальше",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**[Микросервисы](/d/event-app-services)** — какой процесс не работает &nbsp;·&nbsp;\n**[Очереди ошибок](/d/event-app-dead-letters)** — где застряли сообщения &nbsp;·&nbsp;\n**[Очереди детально](/d/event-app-queues)** — что происходит с конкретной очередью &nbsp;·&nbsp;\n**[Брокер RabbitMQ](/d/event-app-rabbitmq)** — здоров ли сам брокер\n\nСтенд: [RabbitMQ](http://localhost:15672) &nbsp;·&nbsp; [Prometheus](http://localhost:9090) &nbsp;·&nbsp;\nпанели сервисов: [check-manager](http://localhost:8001/admin) &nbsp;·&nbsp;\n[check-ruler](http://localhost:8002/admin) &nbsp;·&nbsp;\n[check-register](http://localhost:8003/admin) &nbsp;·&nbsp;\n[budget-control](http://localhost:8004/admin) &nbsp;·&nbsp;\n[event-logger](http://localhost:8005/admin)"
+      }
+    },
     {
       "type": "stat",
       "title": "Процессы не отвечают",
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 4,
         "w": 6,
         "h": 4
       },
@@ -88,7 +118,7 @@
       "title": "Процессы с недоступными зависимостями",
       "gridPos": {
         "x": 6,
-        "y": 0,
+        "y": 4,
         "w": 6,
         "h": 4
       },
@@ -153,7 +183,7 @@
       "title": "Сообщений в очередях ошибок",
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 4,
         "w": 6,
         "h": 4
       },
@@ -218,7 +248,7 @@
       "title": "Сообщений в рабочих очередях",
       "gridPos": {
         "x": 18,
-        "y": 0,
+        "y": 4,
         "w": 6,
         "h": 4
       },
@@ -279,7 +309,7 @@
       "title": "Работоспособность процессов",
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 8,
         "w": 24,
         "h": 5
       },
@@ -361,7 +391,7 @@
       "title": "Поток сообщений через брокер",
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 13,
         "w": 12,
         "h": 8
       },
@@ -466,7 +496,7 @@
       "title": "Глубина рабочих очередей",
       "gridPos": {
         "x": 12,
-        "y": 9,
+        "y": 13,
         "w": 12,
         "h": 8
       },
@@ -537,7 +567,7 @@
       "title": "Очереди без потребителей",
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 21,
         "w": 12,
         "h": 7
       },
@@ -629,7 +659,7 @@
       "title": "Сообщения в очередях ошибок",
       "gridPos": {
         "x": 12,
-        "y": 17,
+        "y": 21,
         "w": 12,
         "h": 7
       },

@@ -17,6 +17,22 @@
   "templating": {
     "list": []
   },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Дашборды",
+      "tags": [
+        "event-app"
+      ],
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "url": "",
+      "tooltip": ""
+    }
+  ],
   "panels": [
     {
       "type": "stat",
