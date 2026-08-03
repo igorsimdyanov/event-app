@@ -19,6 +19,13 @@ scrape_configs:
   # yandex-vision в корневом docker-compose не поднимается, его очередь
   # существует без потребителей — цели для него здесь нет
   - job_name: services
+    # Порт у всех процессов один и тот же, в подписях панелей он только мешает:
+    # instance остаётся именем контейнера, адрес подключения не меняется
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.+):\d+'
+        target_label: instance
+        replacement: '${1}'
     static_configs:
       - targets:
           - 'inbox:9394'

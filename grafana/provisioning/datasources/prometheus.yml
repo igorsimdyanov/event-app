@@ -1,0 +1,15 @@
+# Источник данных задаётся конфигурацией, а не руками в интерфейсе: uid
+# зафиксирован, потому что на него ссылаются дашборды из grafana/dashboards
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      # Совпадает со scrape_interval в prometheus/prometheus.yml
+      timeInterval: 15s
