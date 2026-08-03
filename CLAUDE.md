@@ -229,6 +229,11 @@ docker-compose), ссылки на соседние дашборды лежат 
 `receive <routing_key>` (обработка, из `Tracing::Consumer#trace_message` в воркере). Теги —
 `action`, `attachment_id`, `queue`, `process`, а при исключении `error` с текстом ошибки.
 
+Страницу Dependencies Zipkin строит сам, из поля `remoteEndpoint` спанов (имя брокера —
+константа `Tracing::Span::BROKER`, у всех сервисов одинаковая). Spark-задание
+`zipkin-dependencies` здесь не нужно и не заработает: оно читает спаны из Cassandra,
+Elasticsearch или MySQL, а у нас хранение в памяти.
+
 **Sneakers запускает воркеров форком, а потоки fork не переживают**: `Tracing::Reporter`
 сравнивает `Process.pid` с pid владельца и поднимает поток отправки в потомке заново. Если
 трогаешь репортер — проверяй спаны именно из `<сервис>-sneakers`, а не из веб-процесса: там
