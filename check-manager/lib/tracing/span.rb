@@ -11,6 +11,7 @@ module Tracing
     ERROR_TAG = 'error'.freeze
     PROCESS_TAG = 'process'.freeze
     MICROSECONDS = 1_000_000
+    BROKER = 'rabbitmq'.freeze
 
     attr_reader :trace_id, :id, :parent_id, :name, :kind, :tags
 
@@ -79,6 +80,7 @@ module Tracing
         timestamp: @timestamp,
         duration: @duration,
         localEndpoint: { serviceName: Metrics::ProcessInfo.service },
+        remoteEndpoint: { serviceName: BROKER },
         tags: tags
       }.compact
     end
