@@ -59,6 +59,9 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: 'true'
       GF_AUTH_ANONYMOUS_ORG_ROLE: 'Viewer'
       GF_USERS_DEFAULT_LANGUAGE: 'ru-RU'
+      # Стартовая страница — «Обзор системы» со ссылками на остальные дашборды,
+      # вместо приветственного экрана Grafana
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: '/var/lib/grafana/dashboards/overview.json'
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro

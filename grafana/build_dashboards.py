@@ -149,6 +149,21 @@ def row(title, y):
             "collapsed": False, "panels": []}
 
 
+def text(title, content, pos):
+    return {"type": "text", "title": title, "gridPos": pos,
+            "options": {"mode": "markdown", "content": content}}
+
+
+# Выпадающий список в шапке: перейти к соседнему дашборду, не возвращаясь
+# на главную. Собирается по тегу, поэтому новый дашборд с тем же тегом
+# попадает в навигацию сам
+NAVIGATION = [{
+    "type": "dashboards", "title": "Дашборды", "tags": ["event-app"],
+    "asDropdown": True, "icon": "external link", "includeVars": False,
+    "keepTime": True, "targetBlank": False, "url": "", "tooltip": "",
+}]
+
+
 def dashboard(uid, title, panels, *, description="", refresh="30s",
               time_from="now-1h", templating=None):
     return {
@@ -157,6 +172,7 @@ def dashboard(uid, title, panels, *, description="", refresh="30s",
         "schemaVersion": 39, "version": 1, "refresh": refresh,
         "time": {"from": time_from, "to": "now"},
         "templating": {"list": templating or []},
+        "links": NAVIGATION,
         "panels": panels,
         "annotations": {"list": []},
     }
@@ -171,34 +187,50 @@ def color_override(name, color):
 # --------------------------------------------------------------------------
 # 1. Обзор системы
 # --------------------------------------------------------------------------
+NAVIGATION_PANEL = """
+**[Микросервисы](/d/event-app-services)** — какой процесс не работает &nbsp;·&nbsp;
+**[Очереди ошибок](/d/event-app-dead-letters)** — где застряли сообщения &nbsp;·&nbsp;
+**[Очереди детально](/d/event-app-queues)** — что происходит с конкретной очередью &nbsp;·&nbsp;
+**[Брокер RabbitMQ](/d/event-app-rabbitmq)** — здоров ли сам брокер
+
+Стенд: [RabbitMQ](http://localhost:15672) &nbsp;·&nbsp; [Prometheus](http://localhost:9090) &nbsp;·&nbsp;
+панели сервисов: [check-manager](http://localhost:8001/admin) &nbsp;·&nbsp;
+[check-ruler](http://localhost:8002/admin) &nbsp;·&nbsp;
+[check-register](http://localhost:8003/admin) &nbsp;·&nbsp;
+[budget-control](http://localhost:8004/admin) &nbsp;·&nbsp;
+[event-logger](http://localhost:8005/admin)
+""".strip()
+
 overview = dashboard(
     "event-app-overview", "Обзор системы",
     description="Сводка состояния конвейера обработки чеков: процессы, очереди, поток сообщений.",
     panels=[
+        text("Куда смотреть дальше", NAVIGATION_PANEL, gp(0, 0, 24, 4)),
+
         stat("Процессы не отвечают",
              [target('count(up{job="services"} == 0) or vector(0)')],
-             gp(0, 0, 6, 4), thr=RED_OVER_ZERO, text_mode="value",
+             gp(0, 4, 6, 4), thr=RED_OVER_ZERO, text_mode="value",
              color_mode="background",
              description="Цели Prometheus, с которых не удалось собрать метрики."),
         stat("Процессы с недоступными зависимостями",
              [target('count(service_up == 0) or vector(0)')],
-             gp(6, 0, 6, 4), thr=RED_OVER_ZERO, text_mode="value",
+             gp(6, 4, 6, 4), thr=RED_OVER_ZERO, text_mode="value",
              color_mode="background",
              description="Процесс отвечает, но его база или брокер недоступны."),
         stat("Сообщений в очередях ошибок",
              [target('sum(rabbitmq_detailed_queue_messages{dead_letter="true"})')],
-             gp(12, 0, 6, 4), thr=RED_OVER_ZERO, text_mode="value",
+             gp(12, 4, 6, 4), thr=RED_OVER_ZERO, text_mode="value",
              color_mode="background",
              description="Отклонённые сообщения, ожидающие ручного разбора (ADR-0009)."),
         stat("Сообщений в рабочих очередях",
              [target('sum(rabbitmq_detailed_queue_messages{dead_letter="false"})')],
-             gp(18, 0, 6, 4), text_mode="value", color_mode="background",
+             gp(18, 4, 6, 4), text_mode="value", color_mode="background",
              description="Ненулевое значение при работающих потребителях — сообщения в обработке."),
 
         stat("Работоспособность процессов",
              [target('sort_by_label(up{job="services"}, "instance")',
                      "{{instance}}", instant=True)],
-             gp(0, 4, 24, 5), mappings=UP_MAPPINGS, thr=UP_DOWN,
+             gp(0, 8, 24, 5), mappings=UP_MAPPINGS, thr=UP_DOWN,
              color_mode="background",
              description="Отвечает ли процесс на сбор метрик. Подробности — на дашборде «Микросервисы»."),
 
@@ -211,17 +243,17 @@ overview = dashboard(
                            "выдано потребителям", "C"),
                     target('sum(rate(rabbitmq_global_messages_acknowledged_total[$__rate_interval]))',
                            "подтверждено", "D")],
-                   gp(0, 9, 12, 8), unit="reqps", decimals=2,
+                   gp(0, 13, 12, 8), unit="reqps", decimals=2,
                    description="Сообщений в секунду. Обменник topic копирует сообщение каждому подписчику, поэтому «разложено» обычно больше «принято»."),
 
         timeseries("Глубина рабочих очередей",
                    [target('rabbitmq_detailed_queue_messages{dead_letter="false"}', "{{queue}}")],
-                   gp(12, 9, 12, 8),
+                   gp(12, 13, 12, 8),
                    description="Растущая очередь означает, что потребитель не успевает или упал."),
 
         table("Очереди без потребителей",
               [target('rabbitmq_detailed_queue_consumers == 0', instant=True, fmt="table")],
-              gp(0, 17, 12, 7),
+              gp(0, 21, 12, 7),
               description="Сообщения в такой очереди никто не заберёт. Для очередей ошибок это норма, для рабочих — нет.",
               excludes={"__name__": True, "job": True, "instance": True,
                         "vhost": True, "Value": True},
@@ -230,7 +262,7 @@ overview = dashboard(
 
         timeseries("Сообщения в очередях ошибок",
                    [target('rabbitmq_detailed_queue_messages{dead_letter="true"}', "{{queue}}")],
-                   gp(12, 17, 12, 7), stack=True,
+                   gp(12, 21, 12, 7), stack=True,
                    description="Подробности — на дашборде «Очереди ошибок»."),
     ])
 
