@@ -9,7 +9,7 @@ module Tracing
     # в конверте и различает ответы, отправленные через reply_to
     def trace_message(delivery_info, metadata, message, &)
       Tracing.consumer_span(
-        "receive #{delivery_info&.routing_key}",
+        delivery_info&.routing_key,
         headers: metadata&.headers,
         message: message,
         tags: { queue: self.class::QUEUE_NAME },

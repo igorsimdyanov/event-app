@@ -327,6 +327,10 @@ services:
       ZIPKIN_HOST: 'zipkin'
       SNEAKERS_QUEUE: 'event_logger.in'
       SNEAKERS_BINDING_KEY: '#'
+      # Журнал получает копию каждого сообщения и в графе зависимостей
+      # Zipkin связал бы себя со всеми каналами разом, спрятав за собой
+      # сам конвейер. В трассах чеков он при этом остаётся (ADR-0011)
+      TRACING_DEPENDENCIES: 'false'
     depends_on:
       - db
       - rabbitmq
@@ -352,6 +356,10 @@ services:
       ZIPKIN_HOST: 'zipkin'
       SNEAKERS_QUEUE: 'event_logger.in'
       SNEAKERS_BINDING_KEY: '#'
+      # Журнал получает копию каждого сообщения и в графе зависимостей
+      # Zipkin связал бы себя со всеми каналами разом, спрятав за собой
+      # сам конвейер. В трассах чеков он при этом остаётся (ADR-0011)
+      TRACING_DEPENDENCIES: 'false'
     depends_on:
       - db
       - rabbitmq

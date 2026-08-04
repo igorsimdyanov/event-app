@@ -19,7 +19,7 @@ class SentAttachmentJob < ApplicationJob
   # по конвейеру (ADR-0004). Дальше сервисы продолжат её по заголовкам
   # B3, которые кладёт в сообщение спан публикации (ADR-0011)
   def publish(exchange, attachment)
-    Tracing.producer_span("publish #{Settings.rabbitmq.routing_key}",
+    Tracing.producer_span(Settings.rabbitmq.routing_key,
                           message: trace_context_of(attachment)) do |span|
       exchange.publish(AttachmentSerializer.new(attachment).serialize,
                        routing_key: Settings.rabbitmq.routing_key,

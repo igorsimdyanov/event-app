@@ -19,6 +19,7 @@ metrics:
 
 tracing:
   enabled: <%= ENV.fetch('TRACING_ENABLED') { true } %>
+  dependencies: <%= ENV.fetch('TRACING_DEPENDENCIES') { true } %>
   host: <%= ENV.fetch('ZIPKIN_HOST', 'localhost') %>
   port: <%= ENV.fetch('ZIPKIN_PORT') { 9411 } %>
 
