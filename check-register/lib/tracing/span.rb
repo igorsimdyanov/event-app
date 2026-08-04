@@ -10,19 +10,22 @@ module Tracing
     PRODUCER = 'PRODUCER'.freeze
     ERROR_TAG = 'error'.freeze
     PROCESS_TAG = 'process'.freeze
-    MICROSECONDS = 1_000_000
+    BROKER_TAG = 'broker'.freeze
     BROKER = 'rabbitmq'.freeze
+    MICROSECONDS = 1_000_000
 
-    attr_reader :trace_id, :id, :parent_id, :name, :kind, :tags
+    attr_reader :trace_id, :id, :parent_id, :name, :kind, :remote, :tags
 
-    def initialize(name:, kind:, context:, tags: {})
+    def initialize(name:, kind:, context:, remote:, tags: {})
       @name = name
       @kind = kind
       @context = context
+      @remote = remote
       @trace_id = context.trace_id
       @parent_id = context.parent_span_id
       @id = TraceContext.generate_span_id
-      @tags = stringify(tags).merge(PROCESS_TAG => Metrics::ProcessInfo.kind.to_s)
+      @tags = stringify(tags).merge(PROCESS_TAG => Metrics::ProcessInfo.kind.to_s,
+                                    BROKER_TAG => BROKER)
     end
 
     def start
@@ -80,12 +83,23 @@ module Tracing
         timestamp: @timestamp,
         duration: @duration,
         localEndpoint: { serviceName: Metrics::ProcessInfo.service },
-        remoteEndpoint: { serviceName: BROKER },
+        remoteEndpoint: remote_endpoint,
         tags: tags
       }.compact
     end
 
     private
+
+    # Удалённый конец обмена — маршрутный ключ сообщения, а не брокер:
+    # по нему Zipkin строит граф зависимостей, и каналы становятся в нём
+    # отдельными узлами между сервисами (ADR-0011). Имя самого брокера
+    # остаётся тегом. Спан без этого поля в граф не попадает вовсе —
+    # так из схемы исключаются сервисы, которые её только зашумляют
+    def remote_endpoint
+      return if remote.blank?
+
+      { serviceName: remote }
+    end
 
     def stringify(tags)
       tags.compact.to_h { |name, value| [name.to_s, value.to_s] }

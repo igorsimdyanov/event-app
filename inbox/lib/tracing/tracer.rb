@@ -6,18 +6,22 @@ require_relative 'reporter'
 
 # Распределённая трассировка конвейера (ADR-0011). Сервис отмечает две
 # вещи: приём сообщения из очереди и публикацию нового, — а связывает их
-# контекст B3, который едет в заголовках AMQP-сообщения.
+# контекст B3, который едет в заголовках AMQP-сообщения. Оба вызова
+# принимают маршрутный ключ: он даёт спану имя и становится узлом-каналом
+# в графе зависимостей Zipkin.
 #
-#   Tracing.consumer_span("receive #{routing_key}", headers: metadata.headers,
+#   Tracing.consumer_span(routing_key, headers: metadata.headers,
 #                         message: parsed_message) { обработка }
 #
-#   Tracing.producer_span("publish #{routing_key}", message: message) do |span|
+#   Tracing.producer_span(routing_key, message: message) do |span|
 #     exchange.publish(message.to_json, routing_key: routing_key, headers: span.headers)
 #   end
 module Tracing
   CURRENT_SPAN_KEY = :tracing_current_span
   ACTION_TAG = 'action'.freeze
   ATTACHMENT_TAG = 'attachment_id'.freeze
+  RECEIVE = 'receive'.freeze
+  PUBLISH = 'publish'.freeze
 
   class << self
     def start
@@ -28,19 +32,19 @@ module Tracing
 
     # Обработка сообщения, полученного из очереди. Родителя спан берёт из
     # заголовков сообщения, а если их нет — начинает трассу сам
-    def consumer_span(name, headers: nil, message: nil, tags: {}, &)
+    def consumer_span(routing_key, headers: nil, message: nil, tags: {}, &)
       context = TraceContext.from_headers(headers) || TraceContext.from_message(message)
 
-      record(span(name, Span::CONSUMER, context, message, tags), &)
+      record(span(Span::CONSUMER, routing_key, context, message, tags), &)
     end
 
     # Публикация сообщения. Внутри обработки родителем становится текущий
     # спан потребителя, вне её (админка, планировщик) начинается новая
     # трасса с идентификатором из attachment_id
-    def producer_span(name, message: nil, tags: {}, &)
+    def producer_span(routing_key, message: nil, tags: {}, &)
       context = current&.child_context || TraceContext.from_message(message)
 
-      record(span(name, Span::PRODUCER, context, message, tags), &)
+      record(span(Span::PRODUCER, routing_key, context, message, tags), &)
     end
 
     def current
@@ -58,8 +62,25 @@ module Tracing
 
     private
 
-    def span(name, kind, context, message, tags)
-      Span.new(name: name, kind: kind, context: context, tags: message_tags(message).merge(tags))
+    # Имя спана складывается из действия и маршрутного ключа —
+    # «receive pay_analyse». Тот же ключ уходит в remoteEndpoint: в графе
+    # зависимостей он становится узлом между отправителем и получателем
+    def span(kind, routing_key, context, message, tags)
+      Span.new(name: "#{kind == Span::CONSUMER ? RECEIVE : PUBLISH} #{routing_key}",
+               kind: kind,
+               context: context,
+               remote: remote_for(routing_key),
+               tags: message_tags(message).merge(tags))
+    end
+
+    # Сервис, для которого граф зависимостей выключен, спанов не лишается:
+    # в трассе чека он виден по-прежнему, но рёбер в схеме не порождает.
+    # Так из неё убран event-logger: он получает копию каждого сообщения
+    # и связал бы себя со всеми каналами разом, спрятав сам конвейер
+    def remote_for(routing_key)
+      return unless Settings.tracing.dependencies
+
+      routing_key
     end
 
     # Спан помечается тем, по чему его ищут в Zipkin: действием сообщения

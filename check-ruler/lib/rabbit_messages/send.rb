@@ -33,7 +33,7 @@ module RabbitMessages
     def publish_exchange(payload)
       exchange = find_exchange(EXCHANGE)
 
-      Tracing.producer_span("publish #{routing_key}", message: payload) do |span|
+      Tracing.producer_span(routing_key, message: payload) do |span|
         exchange.publish(payload.to_json, routing_key: routing_key, headers: span.headers)
       end
     end
