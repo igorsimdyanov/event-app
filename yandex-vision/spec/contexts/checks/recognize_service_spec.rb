@@ -15,7 +15,7 @@ RSpec.describe Checks::RecognizeService do
   end
 
   let(:s3_client) { instance_double(Aws::S3::Client) }
-  let(:s3_response) { double('S3GetObjectOutput', body: StringIO.new('image-bytes')) }
+  let(:s3_response) { instance_double(Aws::S3::Types::GetObjectOutput, body: StringIO.new('image-bytes')) }
   let(:send_message) { instance_double(RabbitMessages::Send, call: nil) }
 
   before do
@@ -42,10 +42,11 @@ RSpec.describe Checks::RecognizeService do
     described_class.call(message)
 
     expect(RabbitMessages::Send).to have_received(:new) do |next_message|
-      expect(next_message[:action]).to eq('recognized_result')
-      expect(next_message[:routing_key]).to eq('recognized_result')
-      expect(next_message.dig(:payload, :message)).to eq('Распознанный текст чека')
-      expect(next_message.dig(:payload, :attachment_id)).to eq('a1b2c3')
+      expect(next_message).to include(action: 'recognized_result', routing_key: 'recognized_result')
+      expect(next_message[:payload]).to include(
+        message: 'Распознанный текст чека',
+        attachment_id: 'a1b2c3'
+      )
     end
     expect(send_message).to have_received(:call)
   end

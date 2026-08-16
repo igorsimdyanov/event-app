@@ -32,9 +32,11 @@ module Tracing
         trace_id = normalize_trace_id(values[TRACE_ID_HEADER.downcase])
         return if trace_id.nil?
 
-        new(trace_id: trace_id,
-            parent_span_id: values[SPAN_ID_HEADER.downcase],
-            sampled: values[SAMPLED_HEADER.downcase] != NOT_SAMPLED)
+        new(
+          trace_id: trace_id,
+          parent_span_id: values[SPAN_ID_HEADER.downcase],
+          sampled: values[SAMPLED_HEADER.downcase] != NOT_SAMPLED
+        )
       end
 
       # Сообщение без заголовков трассировки — начало трассы: его отправил

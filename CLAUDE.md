@@ -50,9 +50,35 @@ npx -y @asyncapi/cli validate docs/asyncapi.yaml
 curl -s http://localhost:9411/api/v2/trace/$(echo <attachment_id> | tr -d -)   # трасса чека
 ```
 
-**RuboCop не запускается**: установленная версия не знает Ruby 4.0 (`unknown Ruby version 4.0
-in .ruby-version`). Конфиг `.rubocop.yml` есть, но проверить стиль автоматически нельзя — ориентируйся
-на код рядом.
+**RuboCop работает** начиная с версии 1.89 (до неё линтер не знал Ruby 4.0 и падал на
+`.ruby-version`). Плагины подключаются ключом `plugins:`, а не устаревшим `require:`:
+
+```bash
+docker compose exec event-logger bundle exec rubocop
+```
+
+Сейчас прогон чистый во всех восьми сервисах и в шаблоне — держи его таким. yandex-vision в корневом
+compose не запущен, его проверяют отдельно собранным образом:
+
+```bash
+docker run --rm -v "$PWD/yandex-vision:/rails" --entrypoint bundle yandex-vision exec rubocop
+```
+
+Шаблон — не Rails-приложение, гемов рядом нет, поэтому его проверяют чужим контейнером, подсунув
+конфиг явно. Без `.ruby-version` в проверяемом каталоге RuboCop берёт парсер Ruby 2.7 и сыплет
+ложными `Lint/Syntax` на анонимных блок-параметрах (`&`), поэтому файл надо положить в копию:
+
+```bash
+cp -R microservice-template/templates /tmp/tmpl && cp check-manager/.ruby-version /tmp/tmpl/
+docker compose run --rm -v /tmp/tmpl:/template --entrypoint bundle check-manager exec rubocop --config /template/.rubocop.yml /template
+```
+
+**`rubocop -a` ломает `require Rails.root.join(...).to_s`.** Автокоррекция `Rails/FilePath`
+дублирует последний сегмент пути: `join('lib/metrics/exporter')` превращается в
+`join('lib', 'metrics', 'exporter', 'exporter')`, и приложение перестаёт грузиться с
+`cannot load such file`. Такие строки есть в `config/initializers/metrics.rb` и `tracing.rb`
+каждого сервиса — правь их руками до автофикса, а после `-a` обязательно прогоняй спеки:
+падение вылезает не в линтере, а на загрузке окружения.
 
 ## Обмен сообщениями
 
@@ -268,6 +294,11 @@ fork'а нет и ошибка не проявится.
   (в Postgres нет `LIKE` для uuid) — нужен `ransacker`, приводящий её к тексту.
 - **`t(...)` в DSL ActiveAdmin.** Внутри `filter ..., label: proc { ... }` хелпер `t` недоступен
   (контекст `ResourceDSL`) — используй `I18n.t`. Внутри `index`/`show`/`panel` `t` работает.
+- **Страницы админки не проверяются голым `curl`.** ActiveAdmin 3.5 добавил `restrict_format_access!`,
+  и запрос с заголовком `Accept: */*` (умолчание curl) получает `AccessDenied` и редирект на `/admin`
+  вместо страницы. Проверяя ресурс, передавай браузерный заголовок:
+  `curl -H 'Accept: text/html' http://localhost:8005/admin/events`. Разрешённые форматы ресурса
+  (например `.csv`) при этом отдаются как обычно.
 - **Спеки** пишутся на русском языке в описаниях. `spec/support/rabbitmq.rb` подменяет канал Bunny
   null-объектом, поэтому загрузка воркера в тестах не пытается объявлять очереди.
 - **Первичные ключи — uuid**, поэтому `Model.last` возвращает произвольную запись: в тестах

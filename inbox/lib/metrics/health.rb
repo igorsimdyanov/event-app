@@ -47,15 +47,21 @@ module Metrics
       dependencies = check_dependencies
 
       [
-        gauge('service_up',
-              'Работоспособность процесса микросервиса: 1 — все зависимости доступны',
-              [[{}, all_available?(dependencies)]]),
-        gauge('service_dependency_up',
-              'Доступность зависимости микросервиса: 1 — отвечает',
-              dependencies.map { |name, available| [{ dependency: name }, bool(available)] }),
-        gauge('service_start_time_seconds',
-              'Unix-время запуска процесса микросервиса',
-              [[{}, ProcessInfo.started_at]])
+        gauge(
+          'service_up',
+          'Работоспособность процесса микросервиса: 1 — все зависимости доступны',
+          [[{}, all_available?(dependencies)]]
+        ),
+        gauge(
+          'service_dependency_up',
+          'Доступность зависимости микросервиса: 1 — отвечает',
+          dependencies.map { |name, available| [{dependency: name}, bool(available)] }
+        ),
+        gauge(
+          'service_start_time_seconds',
+          'Unix-время запуска процесса микросервиса',
+          [[{}, ProcessInfo.started_at]]
+        )
       ].join
     end
 
@@ -85,14 +91,14 @@ module Metrics
           connection.active?
         end
       end
-    rescue StandardError => e
+    rescue => e
       log_failure(POSTGRESQL, e)
       false
     end
 
     def rabbitmq_available?
       self.class.rabbitmq_connection.open?
-    rescue StandardError => e
+    rescue => e
       log_failure(RABBITMQ, e)
       false
     end
@@ -121,7 +127,7 @@ module Metrics
     end
 
     def base_labels
-      { service: ProcessInfo.service, process: ProcessInfo.kind }
+      {service: ProcessInfo.service, process: ProcessInfo.kind}
     end
 
     def escape(value)

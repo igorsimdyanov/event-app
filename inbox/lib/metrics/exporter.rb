@@ -57,7 +57,7 @@ module Metrics
         handle(server.accept)
       rescue IOError, Errno::EBADF
         break
-      rescue StandardError => e
+      rescue => e
         Rails.logger.error("Метрики: ошибка обработки запроса — #{e.message}")
       end
     end
@@ -83,7 +83,7 @@ module Metrics
       nil while (header = socket.gets) && header != "\r\n" && !header.strip.empty?
       return if request_line.nil?
 
-      request_line.split(' ')[1]&.split('?')&.first
+      request_line.split[1]&.split('?')&.first
     end
 
     def respond(socket, status, body)

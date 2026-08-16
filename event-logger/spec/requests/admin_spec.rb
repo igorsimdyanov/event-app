@@ -11,7 +11,10 @@ RSpec.describe 'Панель администрирования', type: :request
     create(:event, check: check, action: 'pay_analyse', source: 'check-manager',
       occurred_at: Time.zone.at(1_761_736_906))
   end
-  let!(:registered_pay) do
+
+  # событие регистрации оплаты нужно только для полноты цепочки в выдаче,
+  # ссылка на запись в примерах не используется
+  before do
     create(:event, check: check, action: 'pay_register', source: 'budget-control',
       occurred_at: Time.zone.at(1_761_736_908))
   end

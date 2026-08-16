@@ -93,7 +93,7 @@ module Tracing
         deliver(buffer)
         buffer = []
       end
-    rescue StandardError => e
+    rescue => e
       Rails.logger.error("Трассировка: поток отправки остановлен — #{e.message}")
     end
 
@@ -102,7 +102,7 @@ module Tracing
       return note_failure("Zipkin ответил #{response.code}") unless response.is_a?(Net::HTTPSuccess)
 
       note_success
-    rescue StandardError => e
+    rescue => e
       note_failure(e.message)
     end
 
@@ -110,8 +110,12 @@ module Tracing
       request = Net::HTTP::Post.new(PATH, 'Content-Type' => CONTENT_TYPE)
       request.body = payload.to_json
 
-      Net::HTTP.start(Settings.tracing.host, Settings.tracing.port.to_i,
-                      open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
+      Net::HTTP.start(
+        Settings.tracing.host,
+        Settings.tracing.port.to_i,
+        open_timeout: OPEN_TIMEOUT,
+        read_timeout: READ_TIMEOUT
+      ) do |http|
         http.request(request)
       end
     end

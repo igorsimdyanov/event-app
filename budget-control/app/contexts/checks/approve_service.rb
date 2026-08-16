@@ -6,7 +6,7 @@ class Checks::ApproveService
 
   def call
     check = Check.find(id)
-    check.update_columns(approved: true)
+    check.update!(approved: true)
 
     next_message = Checks::BuildMessageService.call(
                      check: check,

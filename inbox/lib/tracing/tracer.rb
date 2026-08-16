@@ -66,11 +66,13 @@ module Tracing
     # «receive pay_analyse». Тот же ключ уходит в remoteEndpoint: в графе
     # зависимостей он становится узлом между отправителем и получателем
     def span(kind, routing_key, context, message, tags)
-      Span.new(name: "#{kind == Span::CONSUMER ? RECEIVE : PUBLISH} #{routing_key}",
-               kind: kind,
-               context: context,
-               remote: remote_for(routing_key),
-               tags: message_tags(message).merge(tags))
+      Span.new(
+        name: "#{kind == Span::CONSUMER ? RECEIVE : PUBLISH} #{routing_key}",
+        kind: kind,
+        context: context,
+        remote: remote_for(routing_key),
+        tags: message_tags(message).merge(tags)
+      )
     end
 
     # Сервис, для которого граф зависимостей выключен, спанов не лишается:
@@ -104,7 +106,7 @@ module Tracing
       Thread.current[CURRENT_SPAN_KEY] = span.start
       begin
         yield span
-      rescue StandardError => e
+      rescue => e
         span.failed(e)
         raise
       ensure

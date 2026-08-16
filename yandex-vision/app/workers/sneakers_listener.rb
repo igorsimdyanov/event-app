@@ -3,7 +3,7 @@ class SneakersListener
   include Tracing::Consumer
 
   ACTION_HANDLERS = {
-    recognize: Checks::RecognizeService,
+    recognize: Checks::RecognizeService
   }.freeze
   QUEUE_NAME = Settings.sneakers.queue
   QUEUE_DEAD_LETTER = "#{Settings.sneakers.queue}.error".freeze

@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 RSpec.describe Checks::BuildMessageService do
+  subject(:result) { described_class.call(check: check, routing_key: 'pay_register') }
+
   let(:check) do
     build(:check, file: 'attachment/2026-07-31/check.png', attachment_id: SecureRandom.uuid, price: '250.00')
   end
 
-  subject(:result) { described_class.call(check: check, routing_key: 'pay_register') }
 
   it 'устанавливает action равным routing_key' do
     expect(result[:action]).to eq('pay_register')

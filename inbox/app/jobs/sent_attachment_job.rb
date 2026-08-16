@@ -19,17 +19,21 @@ class SentAttachmentJob < ApplicationJob
   # по конвейеру (ADR-0004). Дальше сервисы продолжат её по заголовкам
   # B3, которые кладёт в сообщение спан публикации (ADR-0011)
   def publish(exchange, attachment)
-    Tracing.producer_span(Settings.rabbitmq.routing_key,
-                          message: trace_context_of(attachment)) do |span|
-      exchange.publish(AttachmentSerializer.new(attachment).serialize,
-                       routing_key: Settings.rabbitmq.routing_key,
-                       headers: span.headers)
+    Tracing.producer_span(
+      Settings.rabbitmq.routing_key,
+      message: trace_context_of(attachment)
+    ) do |span|
+      exchange.publish(
+        AttachmentSerializer.new(attachment).serialize,
+        routing_key: Settings.rabbitmq.routing_key,
+        headers: span.headers
+      )
     end
   end
 
   # Трассировке от сообщения нужны только действие и correlation-id,
   # поэтому сериализованное тело для неё не разбирается заново
   def trace_context_of(attachment)
-    { action: Settings.rabbitmq.routing_key, payload: { attachment_id: attachment.id } }
+    {action: Settings.rabbitmq.routing_key, payload: {attachment_id: attachment.id}}
   end
 end

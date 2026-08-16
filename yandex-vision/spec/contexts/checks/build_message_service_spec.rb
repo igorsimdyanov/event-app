@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 RSpec.describe Checks::BuildMessageService do
+  subject(:result) do
+    described_class.call(message: message, recognize_text: 'Распознанный текст чека', routing_key: 'recognized_result')
+  end
+
   let(:message) do
     {
       action: 'recognize',
@@ -14,9 +18,6 @@ RSpec.describe Checks::BuildMessageService do
     }
   end
 
-  subject(:result) do
-    described_class.call(message: message, recognize_text: 'Распознанный текст чека', routing_key: 'recognized_result')
-  end
 
   it 'устанавливает action равным routing_key' do
     expect(result[:action]).to eq('recognized_result')

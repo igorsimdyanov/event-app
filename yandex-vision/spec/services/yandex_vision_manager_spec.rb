@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe YandexVisionManager do
-  let(:path) { Rails.root.join('spec/fixtures/check.png').to_s }
+  let(:path) { Rails.root.join('spec', 'fixtures', 'check.png').to_s }
   let(:response) { instance_double(HTTParty::Response) }
 
   before { allow(described_class).to receive(:post).and_return(response) }
