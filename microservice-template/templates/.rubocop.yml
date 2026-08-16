@@ -1,7 +1,7 @@
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
-require:
+plugins:
 - rubocop-performance
 - rubocop-rails
 - rubocop-rspec
@@ -35,9 +35,6 @@ Style/RescueStandardError:
 Style/AsciiComments:
   Enabled: false
 
-Style/StringLiterals:
-  Enabled: false
-
 Metrics/AbcSize:
   Max: 30
 
@@ -64,3 +61,41 @@ AllCops:
 # кол-во строк в блоке it или specify
 RSpec/ExampleLength:
   Max: 10
+
+# описания спеков пишутся на русском
+RSpec/ContextWording:
+  Prefixes:
+    - когда
+    - если
+    - для
+    - при
+    - с
+    - без
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+# спек воркера держит subject, сообщение и три параметра доставки — шесть let'ов
+RSpec/MultipleMemoizedHelpers:
+  Max: 6
+
+# воркеру Sneakers методы ack!/reject!/requeue! достаются от фреймворка:
+# проверить их вызов можно только подменой у объекта под тестом
+RSpec/SubjectStub:
+  Exclude:
+    - 'spec/workers/**/*'
+
+# omakase требует пробелы внутри скобок массива ([ 1, 2 ]), в проекте принята
+# обычная запись [1, 2] — пробелы в хеш-литералах при этом сохраняются
+Layout/SpaceInsideArrayLiteralBrackets:
+  Enabled: false
+
+# пустой блок записывается как {} (идиома dry-initializer: `default: -> {}`)
+Layout/SpaceInsideBlockBraces:
+  EnforcedStyleForEmptyBraces: no_space
+
+# lib/tracing и lib/metrics вынесены из автозагрузки и не опираются на ActiveSupport
+Rails/Delegate:
+  Exclude:
+    - 'lib/tracing/**/*'
+    - 'lib/metrics/**/*'

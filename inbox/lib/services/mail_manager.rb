@@ -27,10 +27,10 @@ class MailManager
     Mail.find(keys: %w[NOT SEEN])
   end
 
-  def attachments(emails, &block)
+  def attachments(emails, &)
     emails.each do |email|
       email.attachments.map do |attachment|
-        TempfileManager.call(attachment, &block)
+        TempfileManager.call(attachment, &)
       end
     end
   end

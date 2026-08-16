@@ -18,7 +18,7 @@ class SneakersListener
   include Tracing::Consumer
 
   ACTION_HANDLERS = {
-    attachment_registered: HelloWorld,
+    attachment_registered: HelloWorld
   }.freeze
   QUEUE_NAME = Settings.sneakers.queue
   QUEUE_DEAD_LETTER = "#{Settings.sneakers.queue}.error".freeze

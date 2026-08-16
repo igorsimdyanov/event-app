@@ -83,7 +83,7 @@ RSpec.describe InboxListener do
     end
 
     context 'с реальным сообщением из фикстуры hello.json' do
-      let(:message) { Rails.root.join('spec/fixtures/hello.json').read }
+      let(:message) { Rails.root.join('spec', 'fixtures', 'hello.json').read }
 
       it 'передаёт обработчику распознавания полезную нагрузку вложения' do
         worker.work_with_params(message, delivery_info, metadata)

@@ -46,7 +46,7 @@ module Metrics
 
       def rake_task?(name)
         defined?(Rake) && Rake.application.top_level_tasks.include?(name)
-      rescue StandardError
+      rescue
         false
       end
     end

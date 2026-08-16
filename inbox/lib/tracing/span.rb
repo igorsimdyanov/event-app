@@ -24,8 +24,10 @@ module Tracing
       @trace_id = context.trace_id
       @parent_id = context.parent_span_id
       @id = TraceContext.generate_span_id
-      @tags = stringify(tags).merge(PROCESS_TAG => Metrics::ProcessInfo.kind.to_s,
-                                    BROKER_TAG => BROKER)
+      @tags = stringify(tags).merge(
+        PROCESS_TAG => Metrics::ProcessInfo.kind.to_s,
+        BROKER_TAG => BROKER
+      )
     end
 
     def start
@@ -82,7 +84,7 @@ module Tracing
         kind: kind,
         timestamp: @timestamp,
         duration: @duration,
-        localEndpoint: { serviceName: Metrics::ProcessInfo.service },
+        localEndpoint: {serviceName: Metrics::ProcessInfo.service},
         remoteEndpoint: remote_endpoint,
         tags: tags
       }.compact
@@ -98,7 +100,7 @@ module Tracing
     def remote_endpoint
       return if remote.blank?
 
-      { serviceName: remote }
+      {serviceName: remote}
     end
 
     def stringify(tags)

@@ -79,6 +79,12 @@ Lint/AmbiguousBlockAssociation:
 Lint/DuplicateBranch:
   Enabled: false
 
+# сервисам вроде RabbitmqManager блок обязателен, и в спеках он осознанно пустой:
+# проверяется не содержимое блока, а работа обвязки вокруг него
+Lint/EmptyBlock:
+  Exclude:
+    - spec/**/*
+
 Lint/UselessAccessModifier:
   ContextCreatingMethods:
     - concerning
@@ -92,12 +98,12 @@ Metrics/BlockLength:
   Max: 25
   Exclude:
     - config/**/*
-    - test/**/*
+    - spec/**/*
 
 Metrics/ClassLength:
   Max: 200
   Exclude:
-    - test/**/*
+    - spec/**/*
 
 Metrics/CyclomaticComplexity:
   Enabled: false
@@ -107,7 +113,7 @@ Metrics/MethodLength:
   Exclude:
     - bin/setup
     - db/migrate/*
-    - test/**/*
+    - spec/**/*
 
 Metrics/ModuleLength:
   Max: 200
@@ -208,6 +214,16 @@ Style/EmptyMethod:
 
 Style/FetchEnvVar:
   Enabled: false
+
+# lib/metrics и lib/tracing вместе с их инициализаторами — общий каркас,
+# он синхронизируется с microservice-template и живёт по стилю шаблонных
+# сервисов, где magic comment не ставится
+Style/FrozenStringLiteralComment:
+  Exclude:
+    - config/initializers/metrics.rb
+    - config/initializers/tracing.rb
+    - lib/metrics/**/*
+    - lib/tracing/**/*
 
 Style/FormatStringToken:
   Enabled: false

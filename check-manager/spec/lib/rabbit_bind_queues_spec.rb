@@ -15,7 +15,7 @@ RSpec.describe RabbitBindQueues do
         .with(Settings.rabbitmq.exchange, hash_including(type: Settings.rabbitmq.exchange_type, durable: true))
     end
 
-    context 'очередь результатов распознавания (RecognizerListener)' do
+    context 'для очереди результатов распознавания (RecognizerListener)' do
       it 'объявляет основную очередь воркера' do
         described_class.create_for(RecognizerListener)
         expect(channel).to have_received(:queue).with('recognizer.out', hash_including(durable: true))
@@ -46,7 +46,7 @@ RSpec.describe RabbitBindQueues do
       end
     end
 
-    context 'очередь зарегистрированных вложений (InboxListener)' do
+    context 'для очереди зарегистрированных вложений (InboxListener)' do
       it 'уводит отклонённые сообщения в очередь ошибок' do
         described_class.create_for(InboxListener)
 

@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 RSpec.describe Checks::BuildMessageService do
+  subject(:result) do
+    described_class.call(message: message, routing_key: 'recognize', reply_to: 'recognized_result')
+  end
+
   let(:message) do
     {
       action: 'attachment_registered',
@@ -11,10 +15,6 @@ RSpec.describe Checks::BuildMessageService do
         created_at: 1_761_416_041
       }
     }
-  end
-
-  subject(:result) do
-    described_class.call(message: message, routing_key: 'recognize', reply_to: 'recognized_result')
   end
 
   it 'устанавливает action равным routing_key' do

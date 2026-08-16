@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe Pays::BuildMessageService do
+  subject(:result) { described_class.call(message: message, routing_key: 'pay_analyse') }
+
   let(:message) do
     {
       action: 'recognized_result',
@@ -13,8 +15,6 @@ RSpec.describe Pays::BuildMessageService do
       }
     }
   end
-
-  subject(:result) { described_class.call(message: message, routing_key: 'pay_analyse') }
 
   it 'устанавливает action равным routing_key' do
     expect(result[:action]).to eq('pay_analyse')

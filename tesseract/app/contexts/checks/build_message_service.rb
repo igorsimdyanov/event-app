@@ -17,7 +17,7 @@ class Checks::BuildMessageService
         message: recognize_text
       },
       created_at: Time.now.utc.to_i,
-      routing_key: routing_key,
+      routing_key: routing_key
     }
   end
 end

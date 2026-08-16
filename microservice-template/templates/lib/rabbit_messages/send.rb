@@ -5,7 +5,7 @@ module RabbitMessages
 
     attr_reader :parsed_message, :routing_key
 
-    def initialize(parsed_message, routing_key=nil)
+    def initialize(parsed_message, routing_key = nil)
       super()
       @parsed_message = parsed_message
       @routing_key = routing_key

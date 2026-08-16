@@ -14,11 +14,12 @@ RSpec.describe Checks::ApproveService do
     described_class.call(check.id)
 
     expect(RabbitMessages::Send).to have_received(:call) do |next_message|
-      expect(next_message[:action]).to eq('pay_register')
-      expect(next_message[:routing_key]).to eq('pay_register')
-      expect(next_message.dig(:payload, :price)).to eq(check.price)
-      expect(next_message.dig(:payload, :attachment_id)).to eq(check.attachment_id)
-      expect(next_message.dig(:payload, :full_path)).to eq(check.file)
+      expect(next_message).to include(action: 'pay_register', routing_key: 'pay_register')
+      expect(next_message[:payload]).to include(
+        price: check.price,
+        attachment_id: check.attachment_id,
+        full_path: check.file
+      )
     end
   end
 end
