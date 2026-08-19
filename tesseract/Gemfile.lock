@@ -127,7 +127,7 @@ GEM
       ostruct
     connection_pool (3.0.2)
     crass (1.0.7)
-    database_consistency (3.0.9)
+    database_consistency (3.0.10)
       activerecord (>= 3.2)
     date (3.5.1)
     debug (1.11.1)
