@@ -36,6 +36,9 @@ gem 'carrierwave', '~> 3.1.2'
 # https://github.com/carrierwaveuploader/carrierwave-aws/issues/190
 gem 'carrierwave-aws', git: 'https://github.com/igorsimdyanov/carrierwave-aws.git'
 gem 'carrierwave-i18n'
+# image_processing 2.0 перестал тянуть процессоры за собой, а carrierwave грузит
+# ImageProcessing::Vips при инициализации: без явного гема приложение не стартует
+gem 'ruby-vips'
 
 
 group :development, :test do
