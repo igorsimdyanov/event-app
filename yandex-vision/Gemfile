@@ -1,11 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'rails', '~> 8.1.3'
-
-# json 3.0 принимает опции JSON.parse только именованными аргументами, а Rails 8.1.3.1
-# передаёт их хэшем из ActiveSupport::JSON.decode: ломаются jsonb-колонки, JSON-параметры
-# запросов и cookies. Ограничение снять, когда Rails это исправит
-gem 'json', '< 3'
+gem 'rails', '~> 8.1.4'
 
 # Управление бизнес-логикой
 gem 'dry-initializer'
