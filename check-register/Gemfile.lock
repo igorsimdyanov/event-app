@@ -354,13 +354,13 @@ GEM
       prism (>= 1.6.0)
       tsort
     rbtree (0.4.7)
-    rdoc (8.0.0)
+    rdoc (8.1.0)
       erb
       prism (>= 1.6.0)
       rbs (>= 4.0.0)
       tsort
     redcarpet (3.6.1)
-    regexp_parser (2.13.0)
+    regexp_parser (2.13.1)
     reline (0.7.0)
       io-console (~> 0.5)
     require_all (3.0.0)
