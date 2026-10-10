@@ -139,7 +139,7 @@ GEM
       ostruct
     connection_pool (3.0.2)
     crass (1.0.7)
-    date (3.5.1)
+    date (3.6.0)
     debug (1.11.1)
       irb (~> 1.10)
       reline (>= 0.3.8)
@@ -246,7 +246,7 @@ GEM
       railties (>= 4.2.0)
     pp (0.6.4)
       prettyprint
-    prettyprint (0.2.0)
+    prettyprint (0.2.1)
     prism (1.9.0)
     pry (0.16.0)
       coderay (~> 1.1)
@@ -386,7 +386,7 @@ GEM
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)
     unicode-emoji (4.3.0)
-    uri (1.1.1)
+    uri (1.1.2)
     useragent (0.16.11)
     websocket-driver (0.8.2)
       base64
