@@ -82,7 +82,13 @@ class SneakersListener
   end
 
   def unparsable_message
-    { action: UNPARSABLE_ACTION, payload: { raw: raw_message.to_s } }
+    { action: UNPARSABLE_ACTION, payload: { raw: utf8_raw_message } }
+  end
+
+  # Bunny отдаёт тело сообщения в кодировке BINARY, а json 3.1 не сериализует
+  # такие строки с не-ASCII байтами: событие не попало бы в jsonb-колонку
+  def utf8_raw_message
+    raw_message.to_s.dup.force_encoding(Encoding::UTF_8).scrub
   end
 
   def reconnect_to_database(err)
