@@ -48,7 +48,8 @@ RSpec.describe SneakersListener do
     end
 
     context 'когда сообщение не удалось разобрать' do
-      let(:message) { 'не json' }
+      # Bunny отдаёт тело сообщения в кодировке BINARY
+      let(:message) { 'не json'.b }
 
       it 'фиксирует сбой в журнале событий' do
         worker.work_with_params(message, delivery_info, metadata)
@@ -63,6 +64,12 @@ RSpec.describe SneakersListener do
         worker.work_with_params(message, delivery_info, metadata)
 
         expect(Event.order(:created_at).last.payload).to include('raw' => 'не json')
+      end
+
+      it 'заменяет байты, не образующие UTF-8' do
+        worker.work_with_params("не json \xFF".b, delivery_info, metadata)
+
+        expect(Event.order(:created_at).last.payload).to include('raw' => "не json �")
       end
 
       it 'отклоняет сообщение (reject)' do
